@@ -80,7 +80,7 @@ CREATE TABLE job_application (
     CONSTRAINT ck_job_application_work_mode CHECK (work_mode IS NULL OR work_mode IN
         ('ONSITE', 'HYBRID', 'REMOTE')),
     CONSTRAINT ck_job_application_employment_type CHECK (employment_type IS NULL OR employment_type IN
-        ('UOP', 'B2B', 'ZLECENIE', 'INNE')),
+        ('UOP', 'B2B', 'ZLECENIE', 'OTHER')),
     CONSTRAINT ck_job_application_seniority CHECK (seniority_level IS NULL OR seniority_level IN
         ('INTERN', 'JUNIOR', 'MID', 'SENIOR')),
     CONSTRAINT ck_job_application_salary_period CHECK (salary_period IS NULL OR salary_period IN
