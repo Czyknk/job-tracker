@@ -1,0 +1,22 @@
+# Lokalne środowisko developerskie: sama baza.
+# Aplikację dodamy jako osobny serwis, gdy zrobimy Dockerfile.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: job-tracker-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-jobtracker}
+      POSTGRES_USER: ${DB_USER:-jobtracker}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobtracker} # tylko lokalny dev, nie używaj tego na produkcji
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-jobtracker} -d ${DB_NAME:-jobtracker}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
