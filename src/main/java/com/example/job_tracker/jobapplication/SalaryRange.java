@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Value object: widełki wynagrodzenia. Niezmienny, bez setterów.
+ * Value object: widełki wynagrodzenia niezmienne.
  * Nazwy kolumn nadpisuje JobApplication (@AttributeOverrides).
  */
 @Getter
@@ -36,7 +36,7 @@ public class SalaryRange {
     public SalaryRange(BigDecimal min, BigDecimal max, String currency,
                        SalaryPeriod period, SalaryBasis basis) {
         if (min != null && max != null && min.compareTo(max) > 0) {
-            throw new IllegalArgumentException("Minimalne wynagrodzenie nie może być większe niż maksymalne");
+            throw new IllegalArgumentException("Minimal wage cannot be greater than maximum wage");
         }
         this.min = min;
         this.max = max;
