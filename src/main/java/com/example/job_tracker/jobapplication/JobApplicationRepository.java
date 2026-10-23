@@ -1,6 +1,5 @@
-package com.example.job_tracker.repository;
+package com.example.job_tracker.jobapplication;
 
-import com.example.job_tracker.entity.JobApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

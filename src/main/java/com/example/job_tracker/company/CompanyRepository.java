@@ -1,10 +1,14 @@
-package com.example.job_tracker.repository;
+package com.example.job_tracker.company;
 
-import com.example.job_tracker.entity.Company;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
 
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, Long> {
     
+    Optional<Company> findByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCase(String name);
 }
