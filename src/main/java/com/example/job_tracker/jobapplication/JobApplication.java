@@ -2,11 +2,16 @@ package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.BaseEntity;
 import com.example.job_tracker.company.Company;
+import com.example.job_tracker.document.Document;
 import com.example.job_tracker.jobapplication.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "job_application")
@@ -15,6 +20,13 @@ import java.time.LocalDate;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class JobApplication extends BaseEntity {
 
+    @ManyToMany
+    @JoinTable(name = "application_document",
+            joinColumns = @JoinColumn(name = "application_id"),
+            inverseJoinColumns = @JoinColumn(name = "document_id"))
+    @Setter(AccessLevel.NONE)
+    private Set<Document> documents = new HashSet<>();
+    
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
@@ -67,8 +79,20 @@ public class JobApplication extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private RecruitmentStatus currentStatus = RecruitmentStatus.FOUND;
+    
+    
+    public Set<Document> getDocuments() {
+        return Collections.unmodifiableSet(documents);
+    }
 
+    public void attachDocument(Document document) {
+        documents.add(document);
+    }
 
+    public boolean detachDocumentById(Long documentId) {
+        return documents.removeIf(d -> Objects.equals(d.getId(), documentId));
+    }
+    
     public JobApplication(Company company, String position) {
         this.company = company;
         this.position = position;
