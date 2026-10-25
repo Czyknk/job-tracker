@@ -3,6 +3,7 @@ package com.example.job_tracker.jobapplication;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.job_tracker.TestcontainersConfiguration;
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.jobapplication.enums.JobSource;
@@ -17,7 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.utility.TestcontainersConfiguration;
+
 
 /**
  * Test integracyjny na prawdziwym Postgresie (Testcontainers).
