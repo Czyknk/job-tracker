@@ -13,8 +13,9 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
-import com.example.job_tracker.common.ResourceNotFoundException;
+import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import com.example.job_tracker.company.Company;
+import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,12 +36,15 @@ class JobApplicationServiceTest {
     @Mock
     private StatusHistoryRepository statusHistoryRepository;
 
+    @Mock
+    private CompanyRepository companyRepository;
+    
     private JobApplicationService service;
     private JobApplication application;
 
     @BeforeEach
     void setUp() {
-        service = new JobApplicationService(applicationRepository, statusHistoryRepository, FIXED_CLOCK);
+        service = new JobApplicationService(applicationRepository, statusHistoryRepository, companyRepository, FIXED_CLOCK);
         application = new JobApplication(new Company("Acme"), "Junior Java Developer");
     }
 
