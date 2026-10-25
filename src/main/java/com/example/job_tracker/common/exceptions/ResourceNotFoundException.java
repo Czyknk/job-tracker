@@ -1,4 +1,4 @@
-package com.example.job_tracker.common;
+package com.example.job_tracker.common.exceptions;
 
 public class ResourceNotFoundException extends RuntimeException {
 
