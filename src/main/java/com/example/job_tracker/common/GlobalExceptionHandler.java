@@ -3,9 +3,7 @@ package com.example.job_tracker.common;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.example.job_tracker.common.exceptions.BadRequestException;
-import com.example.job_tracker.common.exceptions.ConflictException;
-import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
+import com.example.job_tracker.common.exceptions.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -67,6 +65,16 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return problem(HttpStatus.BAD_REQUEST, "Invalid parameter",
                 "Invalid value for parameter '" + ex.getName() + "'");
+    }
+
+    @ExceptionHandler(UpstreamServiceException.class)
+    public ProblemDetail handleUpstream(UpstreamServiceException ex) {
+        return problem(HttpStatus.BAD_GATEWAY, "Upstream service error", ex.getMessage());
+    }
+
+    @ExceptionHandler(ServiceUnavailableException.class)
+    public ProblemDetail handleUnavailable(ServiceUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable", ex.getMessage());
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, String detail) {
