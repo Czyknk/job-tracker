@@ -1,13 +1,31 @@
-# Lokalne środowisko developerskie: sama baza.
-# Aplikację dodamy jako osobny serwis, gdy zrobimy Dockerfile.
+# Docker Compose file for PostgreSQL database
 services:
+  app:
+    build: .
+    container_name: job-tracker-app
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-jobtracker}
+      DB_USER: ${DB_USER:-jobtracker}
+      DB_PASSWORD: ${DB_PASSWORD:-jobtracker}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-job-tracker}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
   db:
     image: postgres:17-alpine
     container_name: job-tracker-db
     environment:
       POSTGRES_DB: ${DB_NAME:-jobtracker}
       POSTGRES_USER: ${DB_USER:-jobtracker}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobtracker} # tylko lokalny dev, nie używaj tego na produkcji
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jobtracker} # change in future
     ports:
       - "5432:5432"
     volumes:
@@ -18,5 +36,24 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: pgsty/silo:latest
+    container_name: job-tracker-minio
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # Console
+    command: server /data --console-address ":9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   pgdata:
+  miniodata:
