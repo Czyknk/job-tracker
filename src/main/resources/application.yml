@@ -1,7 +1,7 @@
 spring:
   application:
     name: job-tracker
-
+    
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/jobtracker}
     username: ${DB_USER:jobtracker}
@@ -12,6 +12,11 @@ spring:
     hibernate:
       # Schemat należy do Flyway; Hibernate tylko sprawdza, czy encje do niego pasują.
       ddl-auto: validate
-
   flyway:
     enabled: true
+    
+app:
+  ai:
+    base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+    model: gemini-3.8-flash
+    api-key: ${GEMINI_API_KEY}
