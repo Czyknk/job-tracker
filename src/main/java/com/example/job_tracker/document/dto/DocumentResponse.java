@@ -12,6 +12,9 @@ public record DocumentResponse(
         String name,
         LocalDate uploadDate,
         boolean archived,
+        boolean hasFile,
+        String contentType,
+        Long fileSize,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -22,6 +25,9 @@ public record DocumentResponse(
                 document.getName(),
                 document.getUploadDate(),
                 document.isArchived(),
+                document.hasFile(),
+                document.getContentType(),
+                document.getFileSize(),
                 document.getCreatedAt(),
                 document.getUpdatedAt());
     }

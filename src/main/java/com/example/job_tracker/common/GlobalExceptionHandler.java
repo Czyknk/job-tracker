@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.example.job_tracker.common.exceptions.*;
+import com.example.job_tracker.storage.StorageException;
+import com.example.job_tracker.storage.StorageObjectNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -75,6 +77,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ServiceUnavailableException.class)
     public ProblemDetail handleUnavailable(ServiceUnavailableException ex) {
         return problem(HttpStatus.SERVICE_UNAVAILABLE, "Service unavailable", ex.getMessage());
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ProblemDetail handleStorage(StorageException ex) {
+        log.error("Object storage operation failed", ex);
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "Object storage unavailable",
+                "The document storage is temporarily unavailable");
+    }
+
+    @ExceptionHandler(StorageObjectNotFoundException.class)
+    public ProblemDetail handleMissingStorageObject() {
+        return problem(HttpStatus.NOT_FOUND, "Document file not found",
+                "The document metadata exists, but its file is missing from object storage");
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, String detail) {

@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Metadane dokumentu aplikacyjnego (CV, list motywacyjny...). Samego pliku na razie nie przechowujemy.
+ * Dokument aplikacyjny oraz jego metadane w magazynie obiektowym.
  */
 @Entity
 @Table(name = "document")
@@ -37,8 +37,21 @@ public class Document extends BaseEntity {
     @Column(nullable = false)
     private boolean archived;
 
+    @Column(name = "object_key", unique = true, length = 512)
+    private String objectKey;
+
+    @Column(name = "content_type")
+    private String contentType;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
     public Document(DocumentType type, String name) {
         this.type = type;
         this.name = name;
+    }
+
+    public boolean hasFile() {
+        return objectKey != null;
     }
 }
