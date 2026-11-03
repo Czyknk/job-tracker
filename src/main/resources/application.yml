@@ -25,4 +25,4 @@ app:
   ai:
     base-url: https://generativelanguage.googleapis.com/v1beta/openai/
     model: gemini-3.8-flash
-    api-key: ${GEMINI_API_KEY}
+    api-key: ${GEMINI_API_KEY:}
