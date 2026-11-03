@@ -1,16 +1,16 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.BaseEntity;
+import com.example.job_tracker.contact.Contact;
 import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.time.Instant;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,6 +23,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StatusHistory extends BaseEntity {
+
+    @ManyToMany
+    @JoinTable(name = "status_history_contact",
+            joinColumns = @JoinColumn(name = "status_history_id"),
+            inverseJoinColumns = @JoinColumn(name = "contact_id"))
+    private Set<Contact> contacts = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "application_id", nullable = false)
@@ -44,4 +50,17 @@ public class StatusHistory extends BaseEntity {
         this.changedAt = changedAt;
         this.note = note;
     }
+    
+    public Set<Contact> getContacts() {
+        return Collections.unmodifiableSet(contacts);
+    }
+
+    public void addContact(Contact contact) {
+        contacts.add(contact);
+    }
+
+    public boolean removeContactById(Long contactId) {
+        return contacts.removeIf(c -> Objects.equals(c.getId(), contactId));
+    }
+    
 }
