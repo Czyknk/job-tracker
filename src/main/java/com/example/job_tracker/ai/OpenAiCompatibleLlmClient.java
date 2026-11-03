@@ -33,35 +33,60 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                     "AI provider is not configured: set the GEMINI_API_KEY environment variable (app.ai.api-key)");
         }
 
-        ChatRequest request = new ChatRequest(
-                properties.model(),
-                List.of(new ChatMessage("system", systemPrompt), new ChatMessage("user", userPrompt)),
-                0.2);
-
-        ChatResponse response;
+        List<ChatMessage> messages = List.of(
+                new ChatMessage("system", systemPrompt), new ChatMessage("user", userPrompt));
         try {
-            response = restClient.post()
-                    .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(ChatResponse.class);
+            return completeWithModel(properties.model(), messages);
         } catch (RestClientResponseException e) {
             int status = e.getStatusCode().value();
             log.warn("AI provider responded with HTTP {}: {}", status, e.getResponseBodyAsString());
-            String hint = status == 429 ? " (rate limit reached, try again later)" : "";
-            throw new UpstreamServiceException("AI provider returned HTTP " + status + hint);
+            if (!isRetryable(status) || !hasFallback()) {
+                throw upstreamException(status);
+            }
+            log.info("Primary AI model {} failed with HTTP {}; trying fallback model {}",
+                    properties.model(), status, properties.fallbackModel());
+            try {
+                return completeWithModel(properties.fallbackModel(), messages);
+            } catch (RestClientResponseException fallbackException) {
+                int fallbackStatus = fallbackException.getStatusCode().value();
+                log.warn("Fallback AI model {} responded with HTTP {}: {}",
+                        properties.fallbackModel(), fallbackStatus, fallbackException.getResponseBodyAsString());
+                throw upstreamException(fallbackStatus);
+            }
         } catch (RestClientException e) {
             log.warn("AI provider call failed", e);
             throw new UpstreamServiceException("AI provider is unreachable or timed out");
         }
+    }
 
+    private LlmResponse completeWithModel(String model, List<ChatMessage> messages) {
+        ChatResponse response = restClient.post()
+                .uri("/chat/completions")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(new ChatRequest(model, messages, 0.2))
+                .retrieve()
+                .body(ChatResponse.class);
         String text = extractText(response);
-        String model = response.model() != null && !response.model().isBlank()
+        String responseModel = response.model() != null && !response.model().isBlank()
                 ? response.model()
-                : properties.model();
-        return new LlmResponse(text, model);
+                : model;
+        return new LlmResponse(text, responseModel);
+    }
+
+    private boolean hasFallback() {
+        return properties.fallbackModel() != null
+                && !properties.fallbackModel().isBlank()
+                && !properties.fallbackModel().equals(properties.model());
+    }
+
+    private static boolean isRetryable(int status) {
+        return status == 429 || status >= 500;
+    }
+
+    private static UpstreamServiceException upstreamException(int status) {
+        String hint = status == 429 ? " (rate limit reached, try again later)" : "";
+        return new UpstreamServiceException("AI provider returned HTTP " + status + hint);
     }
 
     private static String extractText(ChatResponse response) {

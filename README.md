@@ -92,6 +92,8 @@ przez zmienne środowiskowe:
 | `S3_BUCKET` | `job-tracker` | Nazwa bucketa na dokumenty |
 | `S3_REGION` | `us-east-1` | Region storage |
 | `GEMINI_API_KEY` | brak | Klucz dostawcy AI |
+| `GEMINI_MODEL` | `gemini-3.8-flash` | Główny model AI |
+| `GEMINI_FALLBACK_MODEL` | `gemini-3.5-flash-lite` | Model używany po błędzie przejściowym (429/5xx) |
 
 W Compose endpoint bazy i storage wskazuje na nazwy usług (`db` i `minio`), dlatego
 do uruchamiania aplikacji poza Dockerem należy użyć adresów `localhost`.

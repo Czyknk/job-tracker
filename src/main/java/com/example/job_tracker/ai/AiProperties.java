@@ -11,6 +11,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record AiProperties(
         String baseUrl,
         String model,
+        @DefaultValue("") String fallbackModel,
         String apiKey,
         @DefaultValue("60s") Duration timeout) {
 }
