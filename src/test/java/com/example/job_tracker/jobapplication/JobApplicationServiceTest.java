@@ -16,6 +16,7 @@ import java.util.Optional;
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
+import com.example.job_tracker.contact.ContactRepository;
 import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,13 +39,16 @@ class JobApplicationServiceTest {
 
     @Mock
     private CompanyRepository companyRepository;
+
+    @Mock 
+    private ContactRepository contactRepository;
     
     private JobApplicationService service;
     private JobApplication application;
 
     @BeforeEach
     void setUp() {
-        service = new JobApplicationService(applicationRepository, statusHistoryRepository, companyRepository, FIXED_CLOCK);
+        service = new JobApplicationService(applicationRepository, statusHistoryRepository, companyRepository, contactRepository, FIXED_CLOCK);
         application = new JobApplication(new Company("Acme"), "Junior Java Developer");
     }
 
