@@ -1,8 +1,9 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.history;
 
 import com.example.job_tracker.common.BaseEntity;
 import com.example.job_tracker.contact.Contact;
-import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
+import com.example.job_tracker.jobapplication.JobApplication;
+import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 import jakarta.persistence.*;
 
 import java.time.Instant;

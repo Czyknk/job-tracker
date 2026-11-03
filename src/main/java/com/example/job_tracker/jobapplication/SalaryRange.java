@@ -1,7 +1,7 @@
 package com.example.job_tracker.jobapplication;
 
-import com.example.job_tracker.jobapplication.enums.SalaryBasis;
-import com.example.job_tracker.jobapplication.enums.SalaryPeriod;
+import com.example.job_tracker.jobapplication.model.SalaryBasis;
+import com.example.job_tracker.jobapplication.model.SalaryPeriod;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

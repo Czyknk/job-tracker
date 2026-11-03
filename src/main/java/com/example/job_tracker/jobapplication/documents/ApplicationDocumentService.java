@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.documents;
 
 import java.util.Comparator;
 import java.util.List;
@@ -7,6 +7,8 @@ import com.example.job_tracker.common.exceptions.ConflictException;
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import com.example.job_tracker.document.Document;
 import com.example.job_tracker.document.DocumentRepository;
+import com.example.job_tracker.jobapplication.JobApplication;
+import com.example.job_tracker.jobapplication.JobApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

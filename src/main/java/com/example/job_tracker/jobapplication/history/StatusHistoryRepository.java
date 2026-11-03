@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.history;
 
 import java.util.List;
 import java.util.Optional;

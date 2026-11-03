@@ -1,8 +1,8 @@
 package com.example.job_tracker.jobapplication.dto;
 
 import com.example.job_tracker.jobapplication.SalaryRange;
-import com.example.job_tracker.jobapplication.enums.SalaryBasis;
-import com.example.job_tracker.jobapplication.enums.SalaryPeriod;
+import com.example.job_tracker.jobapplication.model.SalaryBasis;
+import com.example.job_tracker.jobapplication.model.SalaryPeriod;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;

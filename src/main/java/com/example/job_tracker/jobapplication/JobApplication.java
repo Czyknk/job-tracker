@@ -3,7 +3,7 @@ package com.example.job_tracker.jobapplication;
 import com.example.job_tracker.common.BaseEntity;
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.document.Document;
-import com.example.job_tracker.jobapplication.enums.*;
+import com.example.job_tracker.jobapplication.model.*;
 import jakarta.persistence.*;
 import lombok.*;
 

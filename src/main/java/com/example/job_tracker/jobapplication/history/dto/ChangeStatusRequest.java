@@ -1,6 +1,6 @@
-package com.example.job_tracker.jobapplication.dto;
+package com.example.job_tracker.jobapplication.history.dto;
 
-import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
+import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;

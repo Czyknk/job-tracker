@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.history;
 
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import com.example.job_tracker.contact.Contact;

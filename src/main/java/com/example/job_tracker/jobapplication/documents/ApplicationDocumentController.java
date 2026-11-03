@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.documents;
 
 import com.example.job_tracker.document.dto.DocumentResponse;
 import io.swagger.v3.oas.annotations.Operation;

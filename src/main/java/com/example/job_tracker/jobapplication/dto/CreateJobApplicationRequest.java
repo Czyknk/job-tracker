@@ -1,9 +1,9 @@
 package com.example.job_tracker.jobapplication.dto;
 
-import com.example.job_tracker.jobapplication.enums.EmploymentType;
-import com.example.job_tracker.jobapplication.enums.JobSource;
-import com.example.job_tracker.jobapplication.enums.SeniorityLevel;
-import com.example.job_tracker.jobapplication.enums.WorkMode;
+import com.example.job_tracker.jobapplication.model.EmploymentType;
+import com.example.job_tracker.jobapplication.model.JobSource;
+import com.example.job_tracker.jobapplication.model.SeniorityLevel;
+import com.example.job_tracker.jobapplication.model.WorkMode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

@@ -1,11 +1,11 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.PageResponse;
-import com.example.job_tracker.jobapplication.dto.ChangeStatusRequest;
+import com.example.job_tracker.jobapplication.history.dto.ChangeStatusRequest;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.dto.JobApplicationResponse;
-import com.example.job_tracker.jobapplication.dto.StatusHistoryResponse;
-import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
+import com.example.job_tracker.jobapplication.history.dto.StatusHistoryResponse;
+import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

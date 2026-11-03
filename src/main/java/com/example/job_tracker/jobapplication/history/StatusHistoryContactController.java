@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.history;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

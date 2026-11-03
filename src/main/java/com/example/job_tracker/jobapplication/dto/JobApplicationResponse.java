@@ -1,7 +1,7 @@
 package com.example.job_tracker.jobapplication.dto;
 
 import com.example.job_tracker.jobapplication.JobApplication;
-import com.example.job_tracker.jobapplication.enums.*;
+import com.example.job_tracker.jobapplication.model.*;
 
 import java.time.Instant;
 import java.time.LocalDate;

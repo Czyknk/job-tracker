@@ -1,9 +1,9 @@
-package com.example.job_tracker.jobapplication.dto;
+package com.example.job_tracker.jobapplication.history.dto;
 
 import com.example.job_tracker.contact.Contact;
 import com.example.job_tracker.contact.dto.ContactResponse;
-import com.example.job_tracker.jobapplication.StatusHistory;
-import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
+import com.example.job_tracker.jobapplication.history.StatusHistory;
+import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 
 import java.time.Instant;
 import java.util.Comparator;

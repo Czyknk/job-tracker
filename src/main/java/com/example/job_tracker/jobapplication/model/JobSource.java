@@ -1,4 +1,4 @@
-package com.example.job_tracker.jobapplication.enums;
+package com.example.job_tracker.jobapplication.model;
 
 public enum JobSource {
     

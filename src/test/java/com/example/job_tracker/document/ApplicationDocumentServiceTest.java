@@ -9,7 +9,7 @@ import java.util.Optional;
 import com.example.job_tracker.common.exceptions.ConflictException;
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.document.enums.DocumentType;
-import com.example.job_tracker.jobapplication.ApplicationDocumentService;
+import com.example.job_tracker.jobapplication.documents.ApplicationDocumentService;
 import com.example.job_tracker.jobapplication.JobApplication;
 import com.example.job_tracker.jobapplication.JobApplicationRepository;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,7 +1,7 @@
-package com.example.job_tracker.jobapplication;
+package com.example.job_tracker.jobapplication.history;
 
 import com.example.job_tracker.common.exceptions.ConflictException;
-import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
+import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 
 public class InvalidStatusChangeException extends ConflictException {
     
