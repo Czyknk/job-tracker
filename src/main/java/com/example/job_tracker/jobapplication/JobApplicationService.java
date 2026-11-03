@@ -6,11 +6,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
+import com.example.job_tracker.contact.Contact;
+import com.example.job_tracker.contact.ContactRepository;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.enums.RecruitmentStatus;
 import jakarta.persistence.criteria.Predicate;
@@ -28,6 +32,7 @@ public class JobApplicationService {
     private final JobApplicationRepository applicationRepository;
     private final StatusHistoryRepository statusHistoryRepository;
     private final CompanyRepository companyRepository;
+    private final ContactRepository contactRepository;
     private final Clock clock;
     
     private static final Set<String> SORTABLE =
@@ -52,6 +57,12 @@ public class JobApplicationService {
     @Transactional
     public StatusHistory changeStatus(Long applicationId, RecruitmentStatus newStatus,
                                       Instant changedAt, String note) {
+        return changeStatus(applicationId, newStatus, changedAt, note, Set.of());
+    }
+
+    @Transactional
+    public StatusHistory changeStatus(Long applicationId, RecruitmentStatus newStatus,
+                                      Instant changedAt, String note, Set<Long> contactIds) {
         JobApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("JobApplication", applicationId));
 
@@ -59,16 +70,29 @@ public class JobApplicationService {
         if (current.isTerminal()) {
             throw new InvalidStatusChangeException(current, newStatus);
         }
+        Set<Contact> contacts = resolveContacts(contactIds);   // przed jakąkolwiek zmianą
 
         Instant effectiveChangedAt = changedAt != null ? changedAt : clock.instant();
-        StatusHistory entry = statusHistoryRepository.save(
-                new StatusHistory(application, newStatus, effectiveChangedAt, note));
+        StatusHistory entry = new StatusHistory(application, newStatus, effectiveChangedAt, note);
+        contacts.forEach(entry::addContact);
+        StatusHistory saved = statusHistoryRepository.save(entry);
 
         application.setCurrentStatus(newStatus);
         if (newStatus == RecruitmentStatus.APPLIED && application.getDateApplied() == null) {
             application.setDateApplied(LocalDate.ofInstant(effectiveChangedAt, clock.getZone()));
         }
-        return entry;
+        return saved;
+    }
+
+    private Set<Contact> resolveContacts(Set<Long> contactIds) {
+        if (contactIds == null || contactIds.isEmpty()) {
+            return Set.of();
+        }
+        List<Contact> found = contactRepository.findWithCompanyByIdIn(contactIds);
+        Set<Long> foundIds = found.stream().map(Contact::getId).collect(Collectors.toSet());
+        contactIds.stream().filter(id -> !foundIds.contains(id)).findFirst()
+                .ifPresent(id -> { throw new ResourceNotFoundException("Contact", id); });
+        return new HashSet<>(found);
     }
 
     @Transactional(readOnly = true)

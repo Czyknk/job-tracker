@@ -70,7 +70,7 @@ public class JobApplicationController {
     public StatusHistoryResponse changeStatus(@PathVariable Long id,
                                               @Valid @RequestBody ChangeStatusRequest request) {
         return StatusHistoryResponse.from(
-                service.changeStatus(id, request.status(), request.changedAt(), request.note()));
+                service.changeStatus(id, request.status(), request.changedAt(), request.note(), request.contactIds()));
     }
 
     @GetMapping("/{id}/history")
