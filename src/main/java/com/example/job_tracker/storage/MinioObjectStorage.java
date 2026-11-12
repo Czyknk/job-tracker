@@ -27,7 +27,7 @@ final class MinioObjectStorage implements ObjectStorage {
             client.putObject(PutObjectArgs.builder()
                     .bucket(properties.bucket())
                     .object(objectKey)
-                    .stream(content, contentLength, -1)
+                    .stream(content, contentLength, -1L)
                     .contentType(contentType)
                     .build());
         } catch (Exception ex) {
