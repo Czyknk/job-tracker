@@ -1,6 +1,6 @@
 # Job Tracker
 
-![CI](https://github.com/Czyknk/job-tracker/blob/chore/ci-docker/.github/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Czyknk/job-tracker/blob/chore/ci-docker/.github/workflows/ci.yml)
 
 A REST API that keeps your whole job search in one place: the offers you applied to, the CV and cover letter you
 sent, every recruitment stage, the people you talked to, and an AI-generated summary of each job offer.
