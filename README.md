@@ -1,6 +1,7 @@
 # Job Tracker
 
 ![CI](https://github.com/Czyknk/job-tracker/actions/workflows/ci.yml/badge.svg)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 
 A REST API that keeps your whole job search in one place: the offers you applied to, the CV and cover letter you
 sent, every recruitment stage, the people you talked to, and an AI-generated summary of each job offer.
@@ -130,4 +131,4 @@ importing job-alert e-mails as suggested offers · online demo
 
 ## License
 
-MIT, see `LICENSE`.
+GPL v3, see [LICENSE](./LICENSE).
