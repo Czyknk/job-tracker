@@ -1,195 +1,133 @@
 # Job Tracker
 
-REST API do zarządzania procesem rekrutacji: firmami, aplikacjami na stanowiska,
-kontaktami, historią statusów oraz dokumentami kandydata.
+![CI](https://github.com/Czyknk/job-tracker/actions/workflows/ci.yml/badge.svg)
 
-## Funkcje
+A REST API that keeps your whole job search in one place: the offers you applied to, the CV and cover letter you
+sent, every recruitment stage, the people you talked to, and an AI-generated summary of each job offer.
 
-- rejestrowanie firm i aplikacji na stanowiska,
-- filtrowanie i stronicowanie aplikacji,
-- śledzenie zmian statusu rekrutacji oraz powiązanych kontaktów,
-- generowanie podsumowań ofert za pomocą modelu zgodnego z OpenAI API,
-- rejestrowanie metadanych dokumentów i upload plików,
-- przechowywanie plików w obiektowym storage S3-compatible (Silo),
-- dokumentacja API dostępna przez Swagger UI.
+A portfolio project built to practice production-style backend development with Java, Spring Boot, PostgreSQL,
+Docker and CI.
 
-## Stack technologiczny
+![Swagger UI](docs/swagger-ui.png)
 
-- Java 25
-- Spring Boot 4.1
-- Spring Web MVC, Spring Data JPA i Bean Validation
-- PostgreSQL 17
-- Flyway
-- Silo jako S3-compatible object storage
-- Springdoc OpenAPI
-- Maven
-- Docker Compose
+## Features
 
-## Wymagania
+- Companies and job applications with filtering, sorting and paging
+- Recruitment pipeline with an immutable status history (`FOUND → APPLIED → … → OFFER_RECEIVED → ACCEPTED / REJECTED`)
+- Contacts (recruiters, interviewers) linked to the exact stages they took part in
+- Documents (CVs, cover letters) with real file upload to S3-compatible storage, attachable to applications
+- AI summary of a pasted job description, with automatic fallback to a second model
+- OpenAPI documentation with Swagger UI
 
-Do uruchomienia pełnego środowiska potrzebujesz:
+## Tech stack
 
-- Docker Desktop z Docker Compose,
-- opcjonalnie JDK 25 i dostępnego Dockera do uruchamiania testów Testcontainers.
+Java 25 · Spring Boot 4.1 (Web MVC, Data JPA, Validation) · PostgreSQL 17 + Flyway · Silo (S3-compatible storage) ·
+springdoc-openapi · Gemini via an OpenAI-compatible client · JUnit 5, Mockito, Testcontainers ·
+Maven, Docker Compose, GitHub Actions
 
-## Szybki start przez Docker Compose
+## Architecture
 
-1. Ustaw klucz do dostawcy AI, jeśli chcesz korzystać z generowania podsumowań:
+Package-by-feature, classic layers (controller → service → repository), records as DTOs.
 
-   ```powershell
-   $env:GEMINI_API_KEY = "your-api-key"
-   ```
+```mermaid
+flowchart LR
+    Client["Swagger UI / HTTP client"] --> Controllers
+    subgraph App["Spring Boot application"]
+        Controllers["Controllers<br/>REST + validation"] --> Services["Services<br/>business rules, transactions"]
+        Services --> Repos["Spring Data JPA"]
+        Services --> Storage["ObjectStorage<br/>S3 client"]
+        Services --> LLM["LlmClient<br/>OpenAI-compatible"]
+    end
+    Repos --> DB[("PostgreSQL<br/>schema by Flyway")]
+    Storage --> Silo[("Silo<br/>document files")]
+    LLM --> Gemini["Gemini API"]
+```
 
-   Możesz też zdefiniować zmienne w pliku `.env` w katalogu projektu.
+```mermaid
+erDiagram
+    COMPANY ||--o{ JOB_APPLICATION : receives
+    COMPANY ||--o{ CONTACT : employs
+    JOB_APPLICATION ||--o{ STATUS_HISTORY : records
+    JOB_APPLICATION ||--o{ OFFER_SUMMARY : has
+    JOB_APPLICATION }o--o{ DOCUMENT : uses
+    STATUS_HISTORY }o--o{ CONTACT : involves
+```
 
-2. Zbuduj obraz aplikacji i uruchom wszystkie usługi:
+Postgres stores metadata (including the object key of each file); file contents live in S3 storage.
 
-   ```bash
-   docker compose up --build
-   ```
+## API overview
 
-   Compose uruchamia aplikację, PostgreSQL oraz Silo. Migracje Flyway są wykonywane
-   automatycznie przy starcie aplikacji.
+All endpoints live under `/api`; full request/response details are in Swagger UI.
 
-3. Po uruchomieniu:
+| Resource | Endpoints |
+| --- | --- |
+| Companies | `POST/GET /companies`, `GET/PUT/DELETE /companies/{id}` |
+| Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `GET /applications/{id}/history` |
+| Contacts | `POST/GET /contacts`, `GET/PUT/DELETE /contacts/{id}`, `PUT/DELETE /applications/{id}/history/{entryId}/contacts/{contactId}` |
+| Documents | `POST/GET /documents`, `POST /documents/upload`, `GET/PUT/DELETE /documents/{id}`, `GET /documents/{id}/file` |
+| Application documents | `GET /applications/{id}/documents`, `PUT/DELETE /applications/{id}/documents/{documentId}` |
+| AI summaries | `POST/GET /applications/{id}/summaries`, `GET /applications/{id}/summaries/latest` |
 
-   | Usługa | Adres |
-   | --- | --- |
-   | API | http://localhost:8080 |
-   | Swagger UI | http://localhost:8080/swagger-ui/index.html |
-   | OpenAPI JSON | http://localhost:8080/v3/api-docs |
-   | Silo API (S3) | http://localhost:9000 |
-   | Silo Console | http://localhost:9001 |
-   | PostgreSQL | localhost:5432 |
+## Quick start
 
-   Domyślne dane dostępowe do Silo to `minioadmin` / `minioadmin`.
-
-Zatrzymanie usług:
+Requires Docker with Compose.
 
 ```bash
-docker compose down
+cp .env.example .env          # optional: set GEMINI_API_KEY
+docker compose up --build
 ```
 
-Usunięcie kontenerów wraz z danymi PostgreSQL i Silo:
+| Service | URL |
+| --- | --- |
+| Swagger UI | http://localhost:8080/swagger-ui/index.html |
+| Silo console | http://localhost:9001 (`minioadmin` / `minioadmin`, local use only) |
 
-```bash
-docker compose down -v
-```
+Flyway migrations run automatically on startup. A free Gemini key is available in
+[Google AI Studio](https://aistudio.google.com/); without it, everything works except the AI summaries
+(those endpoints return `503`). Stop with `docker compose down` (add `-v` to also delete data).
 
-## Konfiguracja
-
-Wartości domyślne działają z dostarczonym `docker-compose.yml`. Można je nadpisać
-przez zmienne środowiskowe:
-
-| Zmienna | Domyślna wartość | Opis |
-| --- | --- | --- |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/jobtracker` | JDBC URL bazy danych |
-| `DB_USER` | `jobtracker` | Użytkownik PostgreSQL |
-| `DB_PASSWORD` | `jobtracker` | Hasło PostgreSQL |
-| `S3_ENDPOINT` | `http://localhost:9000` | Endpoint storage S3 |
-| `S3_ACCESS_KEY` | `minioadmin` | Klucz dostępowy storage |
-| `S3_SECRET_KEY` | `minioadmin` | Sekret storage |
-| `S3_BUCKET` | `job-tracker` | Nazwa bucketa na dokumenty |
-| `S3_REGION` | `us-east-1` | Region storage |
-| `GEMINI_API_KEY` | brak | Klucz dostawcy AI |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Główny model AI |
-| `GEMINI_FALLBACK_MODEL` | `gemini-3.5-flash-lite` | Model używany po błędzie przejściowym (429/5xx) |
-
-W Compose endpoint bazy i storage wskazuje na nazwy usług (`db` i `minio`), dlatego
-do uruchamiania aplikacji poza Dockerem należy użyć adresów `localhost`.
-
-## Uruchomienie lokalne bez kontenera aplikacji
-
-Uruchom zależności infrastrukturalne:
-
-```bash
-docker compose up -d db minio
-```
-
-Następnie uruchom aplikację:
-
-```bash
-./mvnw spring-boot:run
-```
-
-Na Windows:
-
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-Przy uruchomieniu lokalnym aplikacja korzysta z domyślnych wartości z
-`application.yml` (`localhost`, `jobtracker`, `minioadmin`).
-
-## API dokumentów
-
-Dokument można utworzyć bez pliku, zapisując wyłącznie jego metadane:
-
-```bash
-curl -X POST http://localhost:8080/api/documents \
-  -H "Content-Type: application/json" \
-  -d '{"name":"CV Java Backend","type":"CV"}'
-```
-
-Upload pliku odbywa się przez `multipart/form-data`:
+Example file upload:
 
 ```bash
 curl -X POST http://localhost:8080/api/documents/upload \
-  -F "file=@CV.pdf" \
-  -F "type=CV" \
-  -F "name=CV Java Backend"
+  -F "file=@CV.pdf" -F "type=CV" -F "name=CV Java Backend"
 ```
 
-Obsługiwane typy dokumentów to `CV`, `COVER_LETTER` i `OTHER`.
+## Configuration
 
-W PostgreSQL przechowywane są metadane oraz klucz obiektu (`object_key`), natomiast
-zawartość pliku trafia do bucketa Silo. Plik można pobrać przez:
+Defaults work with the provided `docker-compose.yml`; override them with environment variables or `.env`.
 
-```text
-GET /api/documents/{id}/file
-```
-
-Dokumenty można również przypinać do aplikacji:
-
-```text
-PUT    /api/applications/{applicationId}/documents/{documentId}
-DELETE /api/applications/{applicationId}/documents/{documentId}
-GET    /api/applications/{applicationId}/documents
-```
-
-## Najważniejsze endpointy
-
-| Zasób | Endpoint bazowy | Dostępne operacje |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| Firmy | `/api/companies` | tworzenie, lista, odczyt |
-| Aplikacje | `/api/applications` | tworzenie, lista, odczyt, zmiana statusu |
-| Historia statusów | `/api/applications/{id}/history` | odczyt historii |
-| Kontakty | `/api/contacts` | CRUD |
-| Dokumenty | `/api/documents` | CRUD, upload i download plików |
-| Dokumenty aplikacji | `/api/applications/{id}/documents` | przypinanie i odpinanie |
-| Podsumowania AI | `/api/applications/{id}/summaries` | generowanie, lista, najnowsze |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | `localhost`, `jobtracker`, `jobtracker` | PostgreSQL connection |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION` | local Silo defaults | S3-compatible storage |
+| `GEMINI_API_KEY` | none | AI provider key |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | see `application.yml` | Primary model and fallback for 429/5xx |
 
-Pełne requesty, response'y, parametry i kody błędów są dostępne w Swagger UI.
+Both the AI client (OpenAI protocol) and the storage layer (S3 protocol) are provider-agnostic: switching provider is
+a configuration change.
 
-## Testy i budowanie
-
-Uruchomienie testów:
+## Development
 
 ```bash
-./mvnw test
+docker compose up -d db minio     # infrastructure only
+./mvnw spring-boot:run            # or .\mvnw.cmd spring-boot:run on Windows
+./mvnw verify                     # tests; Docker must be running
 ```
 
-Na Windows:
+Integration tests run against a throwaway PostgreSQL container (Testcontainers), never against the development
+database, and the LLM is replaced by a fake, so no API key is needed.
 
-```powershell
-.\mvnw.cmd test
-```
+## CI/CD
 
-Zbudowanie artefaktu bez uruchamiania testów:
+GitHub Actions builds and tests every push to `main` and every pull request (`./mvnw verify`), builds the Docker
+image, and publishes it to GitHub Container Registry on `main`. Dependabot proposes weekly dependency updates.
 
-```bash
-./mvnw package -DskipTests
-```
+## Roadmap
 
-Dockerfile korzysta z wieloetapowego builda: projekt jest kompilowany w obrazie Maven
-z JDK 25, a aplikacja działa w mniejszym obrazie runtime Eclipse Temurin JRE 25.
+Authentication (Spring Security + JWT) · statistics (funnel, time between stages, CV effectiveness) · reminders ·
+importing job-alert e-mails as suggested offers · online demo
+
+## License
+
+MIT, see `LICENSE`.

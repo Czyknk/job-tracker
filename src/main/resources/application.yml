@@ -10,7 +10,6 @@ spring:
   jpa:
     open-in-view: false
     hibernate:
-      # Schemat należy do Flyway; Hibernate tylko sprawdza, czy encje do niego pasują.
       ddl-auto: validate
   flyway:
     enabled: true
@@ -24,6 +23,6 @@ app:
     region: ${S3_REGION:us-east-1}
   ai:
     base-url: https://generativelanguage.googleapis.com/v1beta/openai/
-    model: ${GEMINI_MODEL:gemini-3.8-flash}
+    model: ${GEMINI_MODEL:gemini-3.6-flash}
     fallback-model: ${GEMINI_FALLBACK_MODEL:gemini-3.5-flash-lite}
     api-key: ${GEMINI_API_KEY:}
