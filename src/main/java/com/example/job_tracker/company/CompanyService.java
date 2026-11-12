@@ -39,4 +39,29 @@ public class CompanyService {
     public List<Company> list() {
         return companyRepository.findAll(Sort.by("name"));
     }
+
+    @Transactional
+    public Company update(Long id, CompanyRequest request) {
+        Company company = get(id);
+        String name = request.name().trim();
+        if (companyRepository.existsByNameIgnoreCaseAndIdNot(name, id)) {
+            throw new ConflictException("Company with name '" + name + "' already exists");
+        }
+        company.setName(name);
+        company.setIndustry(request.industry());
+        company.setWebsite(request.website());
+        company.setNotes(request.notes());
+        return company;
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Company company = get(id);
+        long applications = companyRepository.countApplications(id);
+        if (applications > 0) {
+            throw new ConflictException(
+                    "Company has " + applications + " application(s); delete or reassign them first");
+        }
+        companyRepository.delete(company);
+    }
 }

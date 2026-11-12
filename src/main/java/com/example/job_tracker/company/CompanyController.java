@@ -8,13 +8,9 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
@@ -44,5 +40,18 @@ public class CompanyController {
     @Operation(summary = "Get a company by id")
     public CompanyResponse get(@PathVariable Long id) {
         return CompanyResponse.from(companyService.get(id));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Replace the company's data (the name must stay unique)")
+    public CompanyResponse update(@PathVariable Long id, @Valid @RequestBody CompanyRequest request) {
+        return CompanyResponse.from(companyService.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete a company that has no applications (its contacts and overviews go with it)")
+    public void delete(@PathVariable Long id) {
+        companyService.delete(id);
     }
 }

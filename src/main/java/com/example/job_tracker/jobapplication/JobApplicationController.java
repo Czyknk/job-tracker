@@ -1,6 +1,7 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.PageResponse;
+import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.dto.ChangeStatusRequest;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.dto.JobApplicationResponse;
@@ -18,14 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 @RestController
@@ -77,5 +71,19 @@ public class JobApplicationController {
     @Operation(summary = "Get the status history of an application, oldest first")
     public List<StatusHistoryResponse> history(@PathVariable Long id) {
         return service.getHistory(id).stream().map(StatusHistoryResponse::from).toList();
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "Replace the editable fields (the status changes only via /status)")
+    public JobApplicationResponse update(@PathVariable Long id,
+                                         @Valid @RequestBody UpdateJobApplicationRequest request) {
+        return JobApplicationResponse.from(service.update(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Delete an application with its history, summaries and document links")
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 }

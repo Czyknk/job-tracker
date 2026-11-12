@@ -16,6 +16,7 @@ import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.contact.Contact;
 import com.example.job_tracker.contact.ContactRepository;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
+import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
@@ -135,6 +136,33 @@ public class JobApplicationService {
     public JobApplication get(Long id) {
         return applicationRepository.findWithCompanyById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("JobApplication", id));
+    }
+
+    @Transactional
+    public JobApplication update(Long id, UpdateJobApplicationRequest request) {
+        JobApplication application = get(id);
+        if (!application.getCompany().getId().equals(request.companyId())) {
+            application.setCompany(companyRepository.findById(request.companyId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Company", request.companyId())));
+        }
+        application.setPosition(request.position());
+        application.setOfferUrl(request.offerUrl());
+        application.setSource(request.source());
+        application.setLocation(request.location());
+        application.setWorkMode(request.workMode());
+        application.setEmploymentType(request.employmentType());
+        application.setSeniorityLevel(request.seniorityLevel());
+        application.setSalary(request.salary() == null ? null : request.salary().toEntity());
+        application.setRawDescription(request.rawDescription());
+        application.setDeadline(request.deadline());
+        application.setDateFound(request.dateFound());
+        application.setDateApplied(request.dateApplied());
+        return application;
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        applicationRepository.delete(get(id));
     }
 
     @Transactional(readOnly = true)
