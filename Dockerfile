@@ -1,5 +1,5 @@
 # Step 1: Build the application (Maven + JDK 25)
-FROM maven:3-eclipse-temurin-25-alpine AS builder
+FROM maven:3-eclipse-temurin-26-alpine AS builder
 WORKDIR /app
 
 # Copy the pom.xml and download dependencies
