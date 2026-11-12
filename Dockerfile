@@ -17,8 +17,14 @@ WORKDIR /app
 # Copy the built JAR file
 COPY --from=builder /app/target/*.jar app.jar
 
+# Create a non-root user to run the application
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring
+
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+
 # Expose the port
 EXPOSE 8080
 
 # Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
