@@ -1,0 +1,11 @@
+app:
+  auth:
+    jwt-secret: test-secret-test-secret-test-secret-1234
+    admin-email: owner@example.com
+    admin-password: test-password
+    token-ttl: 15m
+  storage:
+    endpoint: http://localhost:9000
+    access-key: test
+    secret-key: test
+    bucket: job-tracker
