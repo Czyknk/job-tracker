@@ -1,13 +1,10 @@
 # Job Tracker
 
 ![CI](https://github.com/Czyknk/job-tracker/actions/workflows/ci.yml/badge.svg)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](/LICENSE)
 
 A REST API that keeps your whole job search in one place: the offers you applied to, the CV and cover letter you
 sent, every recruitment stage, the people you talked to, and an AI-generated summary of each job offer.
-
-A portfolio project built to practice production-style backend development with Java, Spring Boot, PostgreSQL,
-Docker and CI.
 
 ![Swagger UI](docs/swagger-ui.png)
 
@@ -19,6 +16,7 @@ Docker and CI.
 - Documents (CVs, cover letters) with real file upload to S3-compatible storage, attachable to applications
 - AI summary of a pasted job description, with automatic fallback to a second model
 - OpenAPI documentation with Swagger UI
+- JWT authentication with a single owner account configured through environment variables
 
 ## Tech stack
 
@@ -43,6 +41,17 @@ flowchart LR
     Storage --> Silo[("Silo<br/>document files")]
     LLM --> Gemini["Gemini API"]
 ```
+
+Log in first to obtain an access token:
+
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"owner@example.com","password":"password"}'
+```
+
+In Swagger UI use **Authorize** and paste the returned token. All other `/api/**` endpoints require
+`Authorization: Bearer <token>`. Authentication errors use RFC 9457 `ProblemDetail` responses.
 
 ```mermaid
 erDiagram
@@ -104,6 +113,9 @@ Defaults work with the provided `docker-compose.yml`; override them with environ
 | `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION` | local Silo defaults | S3-compatible storage |
 | `GEMINI_API_KEY` | none | AI provider key |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | see `application.yml` | Primary model and fallback for 429/5xx |
+| `JWT_SECRET` | required, at least 32 bytes | Secret used to sign access tokens |
+| `APP_ADMIN_EMAIL`, `APP_ADMIN_PASSWORD` | required | Initial owner credentials |
+| `SWAGGER_ENABLED` | `true` | Enables Swagger UI and OpenAPI endpoints |
 
 Both the AI client (OpenAI protocol) and the storage layer (S3 protocol) are provider-agnostic: switching provider is
 a configuration change.
@@ -131,4 +143,4 @@ importing job-alert e-mails as suggested offers · online demo
 
 ## License
 
-GPL v3, see [LICENSE](./LICENSE).
+GPL v3, see [LICENSE](/LICENSE).
