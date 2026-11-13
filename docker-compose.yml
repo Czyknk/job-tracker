@@ -10,6 +10,9 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-jobtracker}
       DB_USER: ${DB_USER:-jobtracker}
       DB_PASSWORD: ${DB_PASSWORD:-jobtracker}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to at least 32 bytes}
+      APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:?APP_ADMIN_EMAIL must be set}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?APP_ADMIN_PASSWORD must be set}
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
