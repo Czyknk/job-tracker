@@ -1,0 +1,13 @@
+# Run a dedicated, read-only demo instance (sample data, public demo account, no owner account, no AI key):
+#   docker compose -p jobtracker-demo -f docker-compose.yml -f docker-compose.demo.yml up --build
+# The separate project name (-p) gives the demo its own database and storage volumes.
+# Stop your regular stack first: both define the same fixed container names.
+services:
+  app:
+    environment:
+      APP_DEMO_ENABLED: "true"
+      # Demo mode refuses to start next to an owner account
+      APP_ADMIN_EMAIL: ""
+      APP_ADMIN_PASSWORD: ""
+      # The DEMO role cannot call the AI endpoints anyway
+      GEMINI_API_KEY: ""
