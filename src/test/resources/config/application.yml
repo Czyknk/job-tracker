@@ -1,0 +1,9 @@
+# Configuration only for tests (loaded from classpath:/config/, so it overrides values from the main file
+# and does not replace it). Test secrets are explicit and worthless outside of tests.
+app:
+  security:
+    jwt:
+      secret: test-only-secret-that-is-at-least-32-bytes-long
+    admin:
+      email: admin@example.com
+      password: test-admin-password
