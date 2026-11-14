@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.Optional;
 
 import com.example.job_tracker.common.exceptions.UnauthorizedException;
@@ -29,27 +31,36 @@ class AuthServiceTest {
     @Mock
     private TokenService tokenService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private AuthService service;
 
     @BeforeEach
     void setUp() {
         when(passwordEncoder.encode(any())).thenReturn("dummy-hash");
-        service = new AuthService(userRepository, passwordEncoder, tokenService);
+        service = new AuthService(userRepository, passwordEncoder, tokenService, refreshTokenService);
     }
 
     @Test
-    void returnsTokenForValidCredentials() {
+    void loginReturnsAccessAndRefreshTokenForValidCredentials() {
         AppUser user = new AppUser("owner@example.com", "stored-hash", Role.ADMIN);
-        TokenService.AccessToken token = new TokenService.AccessToken("jwt", 900);
+        TokenService.AccessToken access = new TokenService.AccessToken("jwt", 900);
+        RefreshTokenService.IssuedRefreshToken refresh =
+                new RefreshTokenService.IssuedRefreshToken("raw", Duration.ofDays(7));
         when(userRepository.findByEmailIgnoreCase("owner@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret-pass", "stored-hash")).thenReturn(true);
-        when(tokenService.issueAccessToken(user)).thenReturn(token);
+        when(tokenService.issueAccessToken(user)).thenReturn(access);
+        when(refreshTokenService.startSession(user)).thenReturn(refresh);
 
-        assertThat(service.login(" owner@example.com ", "secret-pass")).isSameAs(token);
+        AuthService.Session session = service.login(" owner@example.com ", "secret-pass");
+
+        assertThat(session.accessToken()).isSameAs(access);
+        assertThat(session.refreshToken()).isSameAs(refresh);
     }
 
     @Test
-    void rejectsWrongPassword() {
+    void loginRejectsWrongPasswordWithoutStartingASession() {
         AppUser user = new AppUser("owner@example.com", "stored-hash", Role.ADMIN);
         when(userRepository.findByEmailIgnoreCase("owner@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "stored-hash")).thenReturn(false);
@@ -59,6 +70,7 @@ class AuthServiceTest {
                 .hasMessage("Invalid email or password");
 
         verify(tokenService, never()).issueAccessToken(any());
+        verifyNoInteractions(refreshTokenService);
     }
 
     @Test
@@ -83,6 +95,35 @@ class AuthServiceTest {
                 .isInstanceOf(UnauthorizedException.class);
 
         verify(passwordEncoder, never()).matches("secret-pass", "stored-hash");
-        verify(tokenService, never()).issueAccessToken(any());
+        verifyNoInteractions(refreshTokenService);
+    }
+
+    @Test
+    void refreshIssuesNewAccessTokenFromRotation() {
+        AppUser user = new AppUser("owner@example.com", "stored-hash", Role.ADMIN);
+        RefreshTokenService.IssuedRefreshToken next =
+                new RefreshTokenService.IssuedRefreshToken("next", Duration.ofDays(7));
+        TokenService.AccessToken access = new TokenService.AccessToken("jwt2", 900);
+        when(refreshTokenService.rotate("old")).thenReturn(new RefreshTokenService.Rotation(user, next));
+        when(tokenService.issueAccessToken(user)).thenReturn(access);
+
+        AuthService.Session session = service.refresh("old");
+
+        assertThat(session.accessToken()).isSameAs(access);
+        assertThat(session.refreshToken()).isSameAs(next);
+    }
+
+    @Test
+    void refreshWithBlankTokenIsRejectedWithoutTouchingTheStore() {
+        assertThatThrownBy(() -> service.refresh("  ")).isInstanceOf(UnauthorizedException.class);
+
+        verifyNoInteractions(refreshTokenService);
+    }
+
+    @Test
+    void logoutRevokesTheSession() {
+        service.logout("raw-token");
+
+        verify(refreshTokenService).revokeSession("raw-token");
     }
 }
