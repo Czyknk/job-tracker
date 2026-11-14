@@ -14,23 +14,33 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private static final String INVALID_CREDENTIALS = "Invalid email or password";
+    private static final String INVALID_REFRESH_TOKEN = "Invalid refresh token";
 
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
+    private final RefreshTokenService refreshTokenService;
 
     // Dummy hash for timing attack prevention: always call passwordEncoder.matches() even if the user doesn't exist.
     private final String dummyHash;
 
     public AuthService(AppUserRepository userRepository, PasswordEncoder passwordEncoder,
-                       TokenService tokenService) {
+                       TokenService tokenService, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
+        this.refreshTokenService = refreshTokenService;
         this.dummyHash = passwordEncoder.encode("not-a-real-password");
     }
 
-    public TokenService.AccessToken login(String email, String password) {
+    /**
+     * Result of authentication: access token (for the response) and refresh token (for the cookie).
+     */
+    public record Session(TokenService.AccessToken accessToken,
+                          RefreshTokenService.IssuedRefreshToken refreshToken) {
+    }
+
+    public Session login(String email, String password) {
         Optional<AppUser> user = userRepository.findByEmailIgnoreCase(email.trim());
 
         boolean authenticated;
@@ -45,7 +55,22 @@ public class AuthService {
             // Do not reveal whether the email exists or not, to prevent user enumeration attacks.
             throw new UnauthorizedException(INVALID_CREDENTIALS);
         }
-        return tokenService.issueAccessToken(user.get());
+        AppUser authenticatedUser = user.get();
+        return new Session(
+                tokenService.issueAccessToken(authenticatedUser),
+                refreshTokenService.startSession(authenticatedUser));
+    }
+
+    public Session refresh(String rawRefreshToken) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new UnauthorizedException(INVALID_REFRESH_TOKEN);
+        }
+        RefreshTokenService.Rotation rotation = refreshTokenService.rotate(rawRefreshToken);
+        return new Session(tokenService.issueAccessToken(rotation.user()), rotation.refreshToken());
+    }
+
+    public void logout(String rawRefreshToken) {
+        refreshTokenService.revokeSession(rawRefreshToken);
     }
 
     private boolean matches(String rawPassword, String hash) {

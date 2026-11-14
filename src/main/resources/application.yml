@@ -23,6 +23,10 @@ app:
     admin:
       email: ${APP_ADMIN_EMAIL:}
       password: ${APP_ADMIN_PASSWORD:admin123}
+    refresh:
+      ttl: 7d
+      cookie-name: refresh_token
+      cookie-secure: true
       
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
