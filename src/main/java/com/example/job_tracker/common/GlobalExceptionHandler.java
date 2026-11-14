@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
- * Jedno miejsce mapujące wyjątki na odpowiedzi błędów w formacie RFC 9457 (ProblemDetail).
+ * Place to map exceptions to RFC 9457 (ProblemDetail) error responses.
  */
 @Slf4j
 @RestControllerAdvice
@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
-        // Treść wyjątku bazy celowo nie trafia do klienta.
+        // The content of the database exception is intentionally not sent to the client.
         log.warn("Data integrity violation", ex);
         return problem(HttpStatus.CONFLICT, "Data integrity violation",
                 "The request conflicts with existing data");
@@ -90,6 +90,11 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleMissingStorageObject() {
         return problem(HttpStatus.NOT_FOUND, "Document file not found",
                 "The document metadata exists, but its file is missing from object storage");
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ProblemDetail handleUnauthorized(UnauthorizedException ex) {
+        return problem(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage());
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, String detail) {
