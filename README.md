@@ -158,6 +158,7 @@ a configuration change.
 
 ```bash
 docker compose up -d db minio     # infrastructure only
+cd backend
 ./mvnw spring-boot:run            # or .\mvnw.cmd spring-boot:run on Windows
 ./mvnw verify                     # tests; Docker must be running
 ```
@@ -169,8 +170,8 @@ database, with their own test configuration (no secrets needed), and the LLM is 
 
 ## CI/CD
 
-GitHub Actions builds and tests every push to `main` and every pull request (`./mvnw verify`), builds the Docker
-image, and publishes it to GitHub Container Registry on `main`. Dependabot proposes weekly dependency updates.
+GitHub Actions builds and tests every push to `main` and every pull request (`cd backend && ./mvnw verify`), builds
+the Docker image, and publishes it to GitHub Container Registry on `main`. Dependabot proposes weekly dependency updates.
 
 ## Design decisions
 

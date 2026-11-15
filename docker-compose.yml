@@ -2,7 +2,7 @@
 services:
   app:
     build:
-      context: .
+      context: ./backend
       args:
         JAVA_VERSION: ${JAVA_VERSION:-25}
     container_name: job-tracker-app
