@@ -155,6 +155,73 @@ body {
   padding: 10px 12px;
 }
 
+.dashboard-card {
+  width: min(680px, 100%);
+  border: 1px solid #dde3ed;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+  padding: 40px;
+}
+
+.dashboard-card h1 {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.session-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.session-details div {
+  border: 1px solid #dde3ed;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.session-details dt {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.session-details dd {
+  margin: 4px 0 0;
+  color: #172033;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-link {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dde3ed;
+  border-radius: 10px;
+  color: #172033;
+  text-decoration: none;
+  padding: 16px;
+}
+
+.dashboard-link:hover {
+  border-color: #a5b4fc;
+  background: #f8f7ff;
+}
+
+.dashboard-link span {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
 .app-header {
   min-height: 64px;
   display: grid;
@@ -362,6 +429,150 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.application-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.application-filters label,
+.application-form label {
+  display: grid;
+  gap: 6px;
+  color: #394258;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.application-filters select,
+.application-form input,
+.application-form select,
+.application-form textarea {
+  width: 100%;
+  border: 1px solid #cbd3e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.application-form textarea {
+  resize: vertical;
+}
+
+.application-form input:focus,
+.application-form select:focus,
+.application-form textarea:focus,
+.application-filters select:focus {
+  border-color: #4f46e5;
+  outline: 3px solid rgba(79, 70, 229, 0.12);
+}
+
+.application-form {
+  display: grid;
+  gap: 20px;
+  max-width: 820px;
+  margin-top: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.salary-fields {
+  border: 1px solid #dde3ed;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.salary-fields legend {
+  color: #394258;
+  font-weight: 700;
+  padding: 0 8px;
+}
+
+.application-list {
+  display: grid;
+  gap: 10px;
+}
+
+.application-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #dde3ed;
+  border-radius: 10px;
+  color: #172033;
+  text-decoration: none;
+  padding: 16px;
+}
+
+.application-row:hover {
+  border-color: #a5b4fc;
+  background: #f8f7ff;
+}
+
+.application-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.application-row > div span {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.application-row-meta {
+  justify-items: end;
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 9px;
+}
+
+.status-offer_received,
+.status-accepted {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-rejected,
+.status-withdrawn,
+.status-ghosted {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.pagination span {
+  color: #5e687c;
+  font-size: 0.875rem;
+}
+
+.application-details dd {
+  white-space: pre-wrap;
 }
 
 @media (max-width: 640px) {
