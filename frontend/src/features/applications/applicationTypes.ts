@@ -68,3 +68,27 @@ export interface ApplicationRequest {
   dateFound: string
   dateApplied: string | null
 }
+
+export interface StatusHistoryResponse {
+  id: number
+  status: RecruitmentStatus
+  changedAt: string
+  note: string | null
+  contacts: ContactSummary[]
+}
+
+export interface ContactSummary {
+  id: number
+  firstName: string
+  lastName: string | null
+  position: string | null
+  email: string | null
+  phone: string | null
+}
+
+export interface ChangeStatusRequest {
+  status: RecruitmentStatus
+  changedAt: string | null
+  note: string | null
+  contactIds: number[]
+}

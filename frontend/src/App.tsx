@@ -8,6 +8,10 @@ import { CompanyFormPage } from './features/companies/pages/CompanyFormPage'
 import { ApplicationsPage } from './features/applications/pages/ApplicationsPage'
 import { ApplicationDetailsPage } from './features/applications/pages/ApplicationDetailsPage'
 import { ApplicationFormPage } from './features/applications/pages/ApplicationFormPage'
+import { ContactsPage } from './features/contacts/pages/ContactsPage'
+import { ContactDetailsPage } from './features/contacts/pages/ContactDetailsPage'
+import { ContactFormPage } from './features/contacts/pages/ContactFormPage'
+import { DocumentsPage } from './features/documents/pages/DocumentsPage'
 
 function Dashboard() {
   const { accessToken, user, logout } = useAuth()
@@ -75,6 +79,8 @@ function AppLayout() {
           <Link to="/">Home</Link>
           <Link to="/companies">Companies</Link>
           <Link to="/applications">Applications</Link>
+          <Link to="/contacts">Contacts</Link>
+          <Link to="/documents">Documents</Link>
         </nav>
         <div className="app-user">
           <span>{user?.email}</span>
@@ -93,6 +99,11 @@ function AppLayout() {
           <Route path="/applications/new" element={<ApplicationFormPage />} />
           <Route path="/applications/:applicationId" element={<ApplicationDetailsPage />} />
           <Route path="/applications/:applicationId/edit" element={<ApplicationFormPage />} />
+          <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/contacts/new" element={<ContactFormPage />} />
+          <Route path="/contacts/:contactId" element={<ContactDetailsPage />} />
+          <Route path="/contacts/:contactId/edit" element={<ContactFormPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
           <Route path="*" element={<h1>Page not found</h1>} />
         </Routes>
       </main>

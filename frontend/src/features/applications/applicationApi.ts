@@ -3,7 +3,9 @@ import type { PageResponse } from '../../shared/api/types'
 import type {
   ApplicationRequest,
   ApplicationResponse,
+  ChangeStatusRequest,
   RecruitmentStatus,
+  StatusHistoryResponse,
 } from './applicationTypes'
 
 export interface ApplicationFilters {
@@ -68,4 +70,30 @@ export function deleteApplication(
   return apiFetch<void>(`/applications/${applicationId}`, {
     method: 'DELETE',
   }, accessToken)
+}
+
+export function getApplicationHistory(
+  applicationId: number,
+  accessToken: string,
+): Promise<StatusHistoryResponse[]> {
+  return apiFetch<StatusHistoryResponse[]>(
+    `/applications/${applicationId}/history`,
+    {},
+    accessToken,
+  )
+}
+
+export function changeApplicationStatus(
+  applicationId: number,
+  request: ChangeStatusRequest,
+  accessToken: string,
+): Promise<StatusHistoryResponse> {
+  return apiFetch<StatusHistoryResponse>(
+    `/applications/${applicationId}/status`,
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+    accessToken,
+  )
 }
