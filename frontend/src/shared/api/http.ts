@@ -15,11 +15,15 @@ export class ApiError extends Error {
 export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
+  accessToken?: string,
 ): Promise<T> {
   const headers = new Headers(init.headers)
 
   if (init.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
+  }
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
   const response = await fetch(`/api${path}`, {
