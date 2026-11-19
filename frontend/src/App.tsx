@@ -36,7 +36,19 @@ function Dashboard() {
             <dd>{user?.role}</dd>
           </div>
         </dl>
-
+        {accessToken && (
+            <details className="token-details">
+              <summary>Access token</summary>
+              <textarea
+                  className="token-value"
+                  readOnly
+                  value={accessToken}
+                  aria-label="Access token"
+                  onFocus={(event) => event.currentTarget.select()}
+              />
+            </details>
+        )}
+        
         <div className="dashboard-actions" aria-label="Quick navigation">
           <Link className="dashboard-link" to="/applications">
             <strong>Applications</strong>
@@ -46,20 +58,16 @@ function Dashboard() {
             <strong>Companies</strong>
             <span>Manage companies and employers</span>
           </Link>
+          <Link className="dashboard-link" to="/contacts">
+            <strong>Contacts</strong>
+            <span>Manage your professional network</span>
+          </Link>
+          <Link className="dashboard-link" to="/documents">
+            <strong>Documents</strong>
+            <span>Store and organize your important files</span>
+          </Link>
         </div>
-
-        {accessToken && (
-          <details className="token-details">
-            <summary>Access token</summary>
-            <textarea
-              className="token-value"
-              readOnly
-              value={accessToken}
-              aria-label="Access token"
-              onFocus={(event) => event.currentTarget.select()}
-            />
-          </details>
-        )}
+        
         <button type="button" className="secondary-button" onClick={handleLogout}>
           Sign out
         </button>
