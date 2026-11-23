@@ -27,6 +27,7 @@ app:
       ttl: 7d
       cookie-name: refresh_token
       cookie-secure: true
+  timezone: ${APP_TIMEZONE:UTC}
       
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
