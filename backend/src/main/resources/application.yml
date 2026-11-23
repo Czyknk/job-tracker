@@ -27,6 +27,8 @@ app:
       ttl: 7d
       cookie-name: refresh_token
       cookie-secure: true
+    recovery:
+      reset-admin-password: ${APP_ADMIN_RESET_PASSWORD:false}
   timezone: ${APP_TIMEZONE:UTC}
       
   storage:
