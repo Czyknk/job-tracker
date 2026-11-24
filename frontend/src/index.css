@@ -156,6 +156,15 @@ body {
   padding: 10px 12px;
 }
 
+.form-success {
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  margin: 0;
+  padding: 10px 12px;
+}
+
 .dashboard-card {
   width: min(680px, 100%);
   border: 1px solid #dde3ed;
@@ -574,6 +583,43 @@ body {
 
 .application-details dd {
   white-space: pre-wrap;
+}
+
+.account-actions {
+  margin: 16px 0;
+}
+
+.notes-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.notes-editor textarea {
+  width: 100%;
+  border: 1px solid #cbd3e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.notes-editor .button-primary {
+  justify-self: start;
+}
+
+.status-archived {
+  margin-left: 8px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .pipeline-section {

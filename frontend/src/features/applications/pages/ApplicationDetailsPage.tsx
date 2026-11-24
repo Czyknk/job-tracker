@@ -22,6 +22,11 @@ import {
   deleteApplication,
   getApplication,
   getApplicationHistory,
+  deleteHistoryEntry,
+  updateHistoryEntry,
+  updateApplicationNotes,
+  archiveApplication,
+  unarchiveApplication,
 } from '../applicationApi'
 import type {
   ApplicationResponse,
@@ -74,6 +79,13 @@ export function ApplicationDetailsPage() {
   const [summaries, setSummaries] = useState<OfferSummaryResponse[]>([])
   const [summaryError, setSummaryError] = useState('')
   const [generatingSummary, setGeneratingSummary] = useState(false)
+  const [notesDraft, setNotesDraft] = useState('')
+  const [notesError, setNotesError] = useState('')
+  const [historyError, setHistoryError] = useState('')
+  const [editingHistoryId, setEditingHistoryId] = useState<number | null>(null)
+  const [editingStatus, setEditingStatus] = useState<RecruitmentStatus>('FOUND')
+  const [editingChangedAt, setEditingChangedAt] = useState('')
+  const [editingNote, setEditingNote] = useState('')
 
   useEffect(() => {
     if (!accessToken || invalidId) return
@@ -95,6 +107,7 @@ export function ApplicationDetailsPage() {
         libraryDocumentsResult, summariesResult]) => {
         if (!active) return
         setApplication(applicationResult)
+        setNotesDraft(applicationResult.notes ?? '')
         setHistory(historyResult)
         setApplicationDocuments(applicationDocumentsResult)
         setLibraryDocuments(libraryDocumentsResult)
@@ -151,9 +164,8 @@ export function ApplicationDetailsPage() {
         note: statusNote.trim() || null,
         contactIds: selectedContactIds,
       }, accessToken)
-
-      setApplication({ ...application, currentStatus: entry.status })
-      setHistory((current) => [...current, entry])
+      void entry
+      await reloadApplicationAndHistory()
       setStatusNote('')
       setChangedAt('')
       setSelectedContactIds([])
@@ -215,6 +227,90 @@ export function ApplicationDetailsPage() {
     }
   }
 
+  async function reloadApplicationAndHistory() {
+    if (!accessToken || !application) return
+    const [applicationResult, historyResult] = await Promise.all([
+      getApplication(application.id, accessToken),
+      getApplicationHistory(application.id, accessToken),
+    ])
+    setApplication(applicationResult)
+    setNotesDraft(applicationResult.notes ?? '')
+    setHistory(historyResult)
+  }
+
+  async function handleSaveNotes() {
+    if (!accessToken || !application) return
+    setNotesError('')
+    try {
+      const result = await updateApplicationNotes(
+        application.id,
+        notesDraft,
+        accessToken,
+      )
+      setApplication(result)
+      setNotesDraft(result.notes ?? '')
+    } catch (requestError) {
+      setNotesError(requestError instanceof ApiError
+        ? requestError.problem.detail ?? requestError.problem.title
+        : 'Unable to update notes.')
+    }
+  }
+
+  async function handleArchive() {
+    if (!accessToken || !application) return
+    setError('')
+    try {
+      const result = application.archived
+        ? await unarchiveApplication(application.id, accessToken)
+        : await archiveApplication(application.id, accessToken)
+      setApplication(result)
+      setNotesDraft(result.notes ?? '')
+    } catch (requestError) {
+      setError(requestError instanceof ApiError
+        ? requestError.problem.detail ?? requestError.problem.title
+        : 'Unable to change archive state.')
+    }
+  }
+
+  function startHistoryEdit(entry: StatusHistoryResponse) {
+    setEditingHistoryId(entry.id)
+    setEditingStatus(entry.status)
+    setEditingChangedAt(entry.changedAt.slice(0, 16))
+    setEditingNote(entry.note ?? '')
+  }
+
+  async function handleSaveHistoryEntry() {
+    if (!accessToken || !application || editingHistoryId === null) return
+    setHistoryError('')
+    try {
+      await updateHistoryEntry(application.id, editingHistoryId, {
+        status: editingStatus,
+        changedAt: new Date(editingChangedAt).toISOString(),
+        note: editingNote.trim() || null,
+      }, accessToken)
+      await reloadApplicationAndHistory()
+      setEditingHistoryId(null)
+    } catch (requestError) {
+      setHistoryError(requestError instanceof ApiError
+        ? requestError.problem.detail ?? requestError.problem.title
+        : 'Unable to edit the history entry.')
+    }
+  }
+
+  async function handleDeleteHistoryEntry(entryId: number) {
+    if (!accessToken || !application) return
+    if (!window.confirm('Undo this history entry?')) return
+    setHistoryError('')
+    try {
+      await deleteHistoryEntry(application.id, entryId, accessToken)
+      await reloadApplicationAndHistory()
+    } catch (requestError) {
+      setHistoryError(requestError instanceof ApiError
+        ? requestError.problem.detail ?? requestError.problem.title
+        : 'Unable to delete the history entry.')
+    }
+  }
+
   if (invalidId) {
     return (
       <section className="content-card">
@@ -250,6 +346,9 @@ export function ApplicationDetailsPage() {
           <span className={`status-badge status-${application.currentStatus.toLowerCase()}`}>
             {application.currentStatus}
           </span>
+          {application.archived && (
+            <span className="status-badge status-archived">ARCHIVED</span>
+          )}
 
           <dl className="company-details application-details">
             <div><dt>Source</dt><dd>{application.source}</dd></div>
@@ -279,6 +378,44 @@ export function ApplicationDetailsPage() {
             <div><dt>Description</dt><dd>{application.rawDescription || '-'}</dd></div>
           </dl>
 
+          <section className="pipeline-section" aria-labelledby="application-notes-title">
+            <div className="page-header">
+              <div>
+                <p className="eyebrow">Notes</p>
+                <h2 id="application-notes-title">Application notes</h2>
+              </div>
+              {user?.role === 'ADMIN' && (
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => void handleArchive()}
+                >
+                  {application.archived ? 'Unarchive' : 'Archive'}
+                </button>
+              )}
+            </div>
+            {notesError && <p className="form-error" role="alert">{notesError}</p>}
+            {user?.role === 'ADMIN' ? (
+              <div className="notes-editor">
+                <textarea
+                  value={notesDraft}
+                  onChange={(event) => setNotesDraft(event.target.value)}
+                  rows={5}
+                  placeholder="Private notes about this application"
+                />
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={() => void handleSaveNotes()}
+                >
+                  Save notes
+                </button>
+              </div>
+            ) : (
+              <p>{application.notes || '-'}</p>
+            )}
+          </section>
+
           <section className="pipeline-section" aria-labelledby="status-history-title">
             <div className="page-header">
               <div>
@@ -291,7 +428,8 @@ export function ApplicationDetailsPage() {
               ? <p>No status history has been added yet.</p>
               : (
                 <ol className="status-timeline">
-                  {[...history].reverse().map((entry) => (
+                  {historyError && <p className="form-error" role="alert">{historyError}</p>}
+                  {[...history].reverse().map((entry, reverseIndex) => (
                     <li key={entry.id}>
                       <div className="timeline-marker" />
                       <div>
@@ -309,11 +447,93 @@ export function ApplicationDetailsPage() {
                             ))}
                           </div>
                         )}
+                        {user?.role === 'ADMIN' && (
+                          <div className="history-actions">
+                            {reverseIndex === 0 && (
+                              <button
+                                type="button"
+                                className="button-secondary"
+                                onClick={() => void handleDeleteHistoryEntry(entry.id)}
+                              >
+                                Undo last change
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="button-secondary"
+                              onClick={() => startHistoryEdit(entry)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="button-danger"
+                              onClick={() => void handleDeleteHistoryEntry(entry.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </li>
                   ))}
                 </ol>
               )}
+
+            {editingHistoryId !== null && (
+              <form
+                className="status-form"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  void handleSaveHistoryEntry()
+                }}
+              >
+                <h3>Edit history entry</h3>
+                {historyError && <p className="form-error" role="alert">{historyError}</p>}
+                <div className="form-grid">
+                  <label>
+                    Status
+                    <select
+                      value={editingStatus}
+                      onChange={(event) =>
+                        setEditingStatus(event.target.value as RecruitmentStatus)}
+                    >
+                      {recruitmentStatuses.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Changed at
+                    <input
+                      type="datetime-local"
+                      value={editingChangedAt}
+                      onChange={(event) => setEditingChangedAt(event.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
+                <label>
+                  Note
+                  <textarea
+                    value={editingNote}
+                    onChange={(event) => setEditingNote(event.target.value)}
+                    rows={3}
+                    maxLength={2000}
+                  />
+                </label>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={() => setEditingHistoryId(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit">Save entry</button>
+                </div>
+              </form>
+            )}
 
             {terminalStatuses.includes(application.currentStatus) ? (
               <p className="terminal-status-message">

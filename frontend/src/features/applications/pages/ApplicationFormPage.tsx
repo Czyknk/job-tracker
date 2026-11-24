@@ -67,9 +67,19 @@ export function ApplicationFormPage() {
         : await createApplication(request, accessToken)
       navigate(`/applications/${saved.id}`)
     } catch (requestError) {
-      setError(requestError instanceof ApiError
-        ? requestError.problem.detail ?? requestError.problem.title
-        : 'Unable to save the application.')
+      if (requestError instanceof ApiError && requestError.status === 409) {
+        try {
+          const refreshed = await getApplication(numericApplicationId, accessToken)
+          setApplication(refreshed)
+          setError('This application was changed elsewhere. It has been reloaded.')
+        } catch {
+          setError('This application was changed elsewhere, reload it before saving.')
+        }
+      } else {
+        setError(requestError instanceof ApiError
+          ? requestError.problem.detail ?? requestError.problem.title
+          : 'Unable to save the application.')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -112,7 +122,7 @@ export function ApplicationFormPage() {
           )
           : (
             <ApplicationForm
-              key={application?.id ?? 'new'}
+              key={application ? `${application.id}-${application.version}` : 'new'}
               application={application}
               companies={companies}
               submitting={submitting}

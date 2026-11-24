@@ -6,7 +6,7 @@ import { listCompanies } from '../../companies/companyApi'
 import type { CompanyResponse } from '../../companies/companyTypes'
 import { listApplications } from '../applicationApi'
 import type {
-  ApplicationResponse,
+  ApplicationListItem,
   RecruitmentStatus,
 } from '../applicationTypes'
 
@@ -26,10 +26,12 @@ const statuses: RecruitmentStatus[] = [
 
 export function ApplicationsPage() {
   const { accessToken, user } = useAuth()
-  const [applications, setApplications] = useState<ApplicationResponse[]>([])
+  const [applications, setApplications] = useState<ApplicationListItem[]>([])
   const [companies, setCompanies] = useState<CompanyResponse[]>([])
   const [status, setStatus] = useState<RecruitmentStatus | ''>('')
   const [companyId, setCompanyId] = useState<number | ''>('')
+  const [query, setQuery] = useState('')
+  const [archived, setArchived] = useState<'ACTIVE' | 'ARCHIVED' | 'ALL'>('ACTIVE')
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,8 @@ export function ApplicationsPage() {
       listApplications(accessToken, {
         status: status || undefined,
         companyId: companyId || undefined,
+        q: query.trim() || undefined,
+        archived,
         page,
         size: 20,
         sort: 'dateFound,desc',
@@ -69,7 +73,7 @@ export function ApplicationsPage() {
     return () => {
       active = false
     }
-  }, [accessToken, companyId, page, status])
+  }, [accessToken, archived, companyId, page, query, status])
 
   function changeFilter(action: () => void) {
     setPage(0)
@@ -91,6 +95,14 @@ export function ApplicationsPage() {
       </div>
 
       <div className="application-filters">
+        <label>
+          Search
+          <input
+            value={query}
+            onChange={(event) => changeFilter(() => setQuery(event.target.value))}
+            placeholder="Position, company, location..."
+          />
+        </label>
         <label>
           Status
           <select
@@ -116,6 +128,20 @@ export function ApplicationsPage() {
             {companies.map((company) => (
               <option key={company.id} value={company.id}>{company.name}</option>
             ))}
+          </select>
+        </label>
+
+        <label>
+          Archive state
+          <select
+            value={archived}
+            onChange={(event) => changeFilter(() =>
+              setArchived(event.target.value as 'ACTIVE' | 'ARCHIVED' | 'ALL'),
+            )}
+          >
+            <option value="ACTIVE">Active</option>
+            <option value="ARCHIVED">Archived</option>
+            <option value="ALL">All</option>
           </select>
         </label>
       </div>

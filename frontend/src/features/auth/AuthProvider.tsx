@@ -1,48 +1,28 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError } from '../../shared/api/http'
 import { AuthContext, type AuthContextValue } from './authContext'
-import { login, logout, refreshAccessToken } from './authApi'
-import type { AuthUser, TokenResponse, UserRole } from './authTypes'
-
-interface JwtPayload {
-  role?: UserRole
-}
-
-function readJwtPayload(accessToken: string): JwtPayload | null {
-  const parts = accessToken.split('.')
-  if (parts.length !== 3) return null
-
-  try {
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(base64)) as JwtPayload
-  } catch {
-    return null
-  }
-}
-
-function isValidUserRole(role: unknown): role is UserRole {
-  return role === 'ADMIN' || role === 'DEMO'
-}
-
-function createUser(tokenResponse: TokenResponse, email: string | null): AuthUser | null {
-  const payload = readJwtPayload(tokenResponse.accessToken)
-  if (!payload || !isValidUserRole(payload.role)) return null
-  return { role: payload.role, email }
-}
+import { changePassword, getCurrentUser, login, logout, refreshAccessToken } from './authApi'
+import type { AuthUser } from './authTypes'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [passwordChanged, setPasswordChanged] = useState(false)
 
   useEffect(() => {
     let active = true
 
     refreshAccessToken()
-      .then((tokenResponse) => {
+      .then(async (tokenResponse) => {
         if (!active) return
         setAccessToken(tokenResponse.accessToken)
-        setUser(createUser(tokenResponse, null))
+        const currentUser = await getCurrentUser(tokenResponse.accessToken)
+        if (active) setUser({
+          id: currentUser.id,
+          email: currentUser.email,
+          role: currentUser.role,
+        })
       })
       .catch((error: unknown) => {
         if (!active) return
@@ -65,10 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     accessToken,
     user,
     isLoading,
+    passwordChanged,
     login: async (request) => {
+      setPasswordChanged(false)
       const tokenResponse = await login(request)
       setAccessToken(tokenResponse.accessToken)
-      setUser(createUser(tokenResponse, request.email))
+      const currentUser = await getCurrentUser(tokenResponse.accessToken)
+      setUser({
+        id: currentUser.id,
+        email: currentUser.email,
+        role: currentUser.role,
+      })
     },
     logout: async () => {
       try {
@@ -78,7 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null)
       }
     },
-  }), [accessToken, user, isLoading])
+    changePassword: async (request) => {
+      if (!accessToken) throw new Error('No active session')
+      await changePassword(request, accessToken)
+      setPasswordChanged(true)
+      setAccessToken(null)
+      setUser(null)
+    },
+  }), [accessToken, user, isLoading, passwordChanged])
 
   return (
     <AuthContext.Provider value={value}>

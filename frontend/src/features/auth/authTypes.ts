@@ -12,6 +12,18 @@ export interface TokenResponse {
 }
 
 export interface AuthUser {
+  id: number
   role: UserRole
   email: string | null
+}
+
+export interface CurrentUserResponse {
+  id: number
+  email: string
+  role: UserRole
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
 }

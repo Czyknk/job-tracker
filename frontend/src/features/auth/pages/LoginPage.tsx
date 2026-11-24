@@ -4,7 +4,7 @@ import { ApiError } from '../../../shared/api/http'
 import { useAuth } from '../useAuth'
 
 export function LoginPage() {
-  const { user, isLoading, login } = useAuth()
+  const { user, isLoading, login, passwordChanged } = useAuth()
   const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -42,6 +42,11 @@ export function LoginPage() {
         <p className="eyebrow">Job Tracker</p>
         <h1>Sign in</h1>
 
+        {passwordChanged && (
+          <p className="form-success" role="status">
+            Password changed successfully. Please sign in with your new password.
+          </p>
+        )}
         {error && <p className="form-error" role="alert">{error}</p>}
 
         <label>

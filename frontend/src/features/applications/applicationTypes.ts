@@ -48,6 +48,9 @@ export interface ApplicationResponse {
   deadline: string | null
   dateFound: string
   dateApplied: string | null
+  notes: string | null
+  archived: boolean
+  version: number
   currentStatus: RecruitmentStatus
   createdAt: string
   updatedAt: string
@@ -67,6 +70,32 @@ export interface ApplicationRequest {
   deadline: string | null
   dateFound: string
   dateApplied: string | null
+  notes: string | null
+  version?: number
+}
+
+export type ApplicationArchivedFilter = 'ACTIVE' | 'ARCHIVED' | 'ALL'
+
+export interface ApplicationListItem {
+  id: number
+  companyId: number
+  companyName: string
+  position: string
+  offerUrl: string | null
+  source: JobSource
+  location: string | null
+  workMode: WorkMode | null
+  employmentType: EmploymentType | null
+  seniorityLevel: SeniorityLevel | null
+  salary: SalaryRangeDto | null
+  deadline: string | null
+  dateFound: string
+  dateApplied: string | null
+  currentStatus: RecruitmentStatus
+  archived: boolean
+  version: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface StatusHistoryResponse {

@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../useAuth'
 
 export function ProtectedRoute() {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, passwordChanged } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -10,7 +10,8 @@ export function ProtectedRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />
+    const destination = passwordChanged ? '/' : location.pathname
+    return <Navigate to="/login" replace state={{ from: destination }} />
   }
 
   return <Outlet />
