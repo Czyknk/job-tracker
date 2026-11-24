@@ -6,10 +6,7 @@ import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.example.job_tracker.company.Company;
@@ -81,11 +78,22 @@ public class JobApplicationService {
         Set<Contact> contacts = resolveContacts(contactIds);
 
         Instant effectiveChangedAt = changedAt != null ? changedAt : clock.instant();
+        // FOUND is the starting point, so only real stages decide whether the new entry is the latest one
+        Optional<StatusHistory> latestStage = statusHistoryRepository
+                .findFirstByApplicationIdAndStatusNotOrderByChangedAtDescIdDesc(applicationId, RecruitmentStatus.FOUND);
+        boolean becomesLatest = latestStage.isEmpty()
+                || !effectiveChangedAt.isBefore(latestStage.get().getChangedAt());
+        if (!becomesLatest && newStatus.isTerminal()) {
+            throw new ConflictException("A final status must be the last history entry");
+        }
+
         StatusHistory entry = new StatusHistory(application, newStatus, effectiveChangedAt, note);
         contacts.forEach(entry::addContact);
         StatusHistory saved = statusHistoryRepository.save(entry);
 
-        application.setCurrentStatus(newStatus);
+        if (becomesLatest) {
+            application.setCurrentStatus(newStatus);
+        }
         if (newStatus == RecruitmentStatus.APPLIED && application.getDateApplied() == null) {
             application.setDateApplied(LocalDate.ofInstant(effectiveChangedAt, clock.getZone()));
         }
@@ -108,7 +116,11 @@ public class JobApplicationService {
         if (!applicationRepository.existsById(applicationId)) {
             throw new ResourceNotFoundException("JobApplication", applicationId);
         }
-        return statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(applicationId);
+        return statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(applicationId).stream()
+                .sorted(Comparator.comparing((StatusHistory e) -> e.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
+                        .thenComparing(StatusHistory::getChangedAt)
+                        .thenComparing(StatusHistory::getId))
+                .toList();
     }
 
     @Transactional
@@ -212,11 +224,11 @@ public class JobApplicationService {
             if (filter.seniorityLevel() != null)
                 predicates.add(cb.equal(root.get("seniorityLevel"), filter.seniorityLevel()));
             if (filter.foundFrom() != null)
-                predicates.add(cb.greaterThanOrEqualTo(root.<LocalDate>get("dateFound"), filter.foundFrom()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("dateFound"), filter.foundFrom()));
             if (filter.foundTo() != null)
-                predicates.add(cb.lessThanOrEqualTo(root.<LocalDate>get("dateFound"), filter.foundTo()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("dateFound"), filter.foundTo()));
             if (filter.deadlineBefore() != null)
-                predicates.add(cb.lessThanOrEqualTo(root.<LocalDate>get("deadline"), filter.deadlineBefore()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("deadline"), filter.deadlineBefore()));
             switch (filter.archived()) {
                 case ACTIVE -> predicates.add(cb.isFalse(root.get("archived")));
                 case ARCHIVED -> predicates.add(cb.isTrue(root.get("archived")));
@@ -229,11 +241,11 @@ public class JobApplicationService {
                 for (String term : terms) {
                     String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
                     predicates.add(cb.or(
-                            cb.like(cb.lower(root.<String>get("position")), pattern, '\\'),
-                            cb.like(cb.lower(company.<String>get("name")), pattern, '\\'),
-                            cb.like(cb.lower(root.<String>get("location")), pattern, '\\'),
-                            cb.like(cb.lower(root.<String>get("rawDescription")), pattern, '\\'),
-                            cb.like(cb.lower(root.<String>get("notes")), pattern, '\\')));
+                            cb.like(cb.lower(root.get("position")), pattern, '\\'),
+                            cb.like(cb.lower(company.get("name")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("location")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("rawDescription")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("notes")), pattern, '\\')));
                 }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
