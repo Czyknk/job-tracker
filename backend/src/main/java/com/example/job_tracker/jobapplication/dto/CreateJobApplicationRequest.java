@@ -28,6 +28,7 @@ public record CreateJobApplicationRequest(
         String rawDescription,
         LocalDate deadline,
         @Schema(description = "Defaults to today when omitted")
+        String notes,
         LocalDate dateFound,
         LocalDate dateApplied) {
 }

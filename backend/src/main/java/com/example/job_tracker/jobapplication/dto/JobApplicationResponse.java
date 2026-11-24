@@ -23,10 +23,13 @@ public record JobApplicationResponse(
         LocalDate dateFound,
         LocalDate dateApplied,
         RecruitmentStatus currentStatus,
+        String notes,
+        boolean archived,
+        Long version,
         Instant createdAt,
         Instant updatedAt) {
 
-    // Zakłada, że company jest już załadowane (EntityGraph w repozytorium), bo open-in-view jest wyłączone.
+    // Assumes that company is already loaded (EntityGraph in repository), because open-in-view is disabled.
     public static JobApplicationResponse from(JobApplication application) {
         return new JobApplicationResponse(
                 application.getId(),
@@ -45,6 +48,9 @@ public record JobApplicationResponse(
                 application.getDateFound(),
                 application.getDateApplied(),
                 application.getCurrentStatus(),
+                application.getNotes(),
+                application.isArchived(),
+                application.getVersion(),
                 application.getCreatedAt(),
                 application.getUpdatedAt());
     }

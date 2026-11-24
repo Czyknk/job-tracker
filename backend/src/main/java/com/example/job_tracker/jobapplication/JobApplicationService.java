@@ -1,26 +1,26 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.exceptions.BadRequestException;
+import com.example.job_tracker.common.exceptions.ConflictException;
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.contact.Contact;
 import com.example.job_tracker.contact.ContactRepository;
+import com.example.job_tracker.jobapplication.dto.ApplicationFilter;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,8 +43,8 @@ public class JobApplicationService {
             Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt");
 
     /**
-     * Zapisuje aplikację i od razu zakłada pierwszy wpis historii, żeby historia
-     * zawsze zaczynała się od bieżącego statusu.
+     * Saves the application and immediately creates the first history entry, so that the history
+     * always starts with the current status.
      */
     @Transactional
     public JobApplication create(JobApplication application) {
@@ -55,8 +55,8 @@ public class JobApplicationService {
     }
 
     /**
-     * Zmienia status: dopisuje wpis do historii i aktualizuje currentStatus w jednej transakcji.
-     * changedAt jest opcjonalne (domyślnie "teraz"); currentStatus zawsze odpowiada ostatnio dodanemu wpisowi.
+     * Changes the status of the job application: adds an entry to the history and updates the currentStatus in a single transaction.
+     * changedAt is optional (defaults to "now"); currentStatus always corresponds to the most recently added entry.
      */
     @Transactional
     public StatusHistory changeStatus(Long applicationId, RecruitmentStatus newStatus,
@@ -74,14 +74,26 @@ public class JobApplicationService {
         if (current.isTerminal()) {
             throw new InvalidStatusChangeException(current, newStatus);
         }
-        Set<Contact> contacts = resolveContacts(contactIds);   // przed jakąkolwiek zmianą
+        // Resolve the contacts before making any changes
+        Set<Contact> contacts = resolveContacts(contactIds);
 
         Instant effectiveChangedAt = changedAt != null ? changedAt : clock.instant();
+        // FOUND is the starting point, so only real stages decide whether the new entry is the latest one
+        Optional<StatusHistory> latestStage = statusHistoryRepository
+                .findFirstByApplicationIdAndStatusNotOrderByChangedAtDescIdDesc(applicationId, RecruitmentStatus.FOUND);
+        boolean becomesLatest = latestStage.isEmpty()
+                || !effectiveChangedAt.isBefore(latestStage.get().getChangedAt());
+        if (!becomesLatest && newStatus.isTerminal()) {
+            throw new ConflictException("A final status must be the last history entry");
+        }
+
         StatusHistory entry = new StatusHistory(application, newStatus, effectiveChangedAt, note);
         contacts.forEach(entry::addContact);
         StatusHistory saved = statusHistoryRepository.save(entry);
 
-        application.setCurrentStatus(newStatus);
+        if (becomesLatest) {
+            application.setCurrentStatus(newStatus);
+        }
         if (newStatus == RecruitmentStatus.APPLIED && application.getDateApplied() == null) {
             application.setDateApplied(LocalDate.ofInstant(effectiveChangedAt, clock.getZone()));
         }
@@ -104,7 +116,25 @@ public class JobApplicationService {
         if (!applicationRepository.existsById(applicationId)) {
             throw new ResourceNotFoundException("JobApplication", applicationId);
         }
-        return statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(applicationId);
+        return statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(applicationId).stream()
+                .sorted(Comparator.comparing((StatusHistory e) -> e.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
+                        .thenComparing(StatusHistory::getChangedAt)
+                        .thenComparing(StatusHistory::getId))
+                .toList();
+    }
+
+    @Transactional
+    public JobApplication updateNotes(Long id, String notes) {
+        JobApplication application = get(id);
+        application.setNotes(blankToNull(notes));
+        return application;
+    }
+
+    @Transactional
+    public JobApplication setArchived(Long id, boolean archived) {
+        JobApplication application = get(id);
+        application.setArchived(archived);
+        return application;
     }
 
     @Transactional
@@ -125,6 +155,7 @@ public class JobApplicationService {
         }
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
+        application.setNotes(blankToNull(request.notes()));
         if (request.dateFound() != null) {
             application.setDateFound(request.dateFound());
         }
@@ -141,6 +172,10 @@ public class JobApplicationService {
     @Transactional
     public JobApplication update(Long id, UpdateJobApplicationRequest request) {
         JobApplication application = get(id);
+        if (!application.getVersion().equals(request.version())) {
+            throw new ConflictException("The application was modified in the meantime; reload it and try again");
+        }
+
         if (!application.getCompany().getId().equals(request.companyId())) {
             application.setCompany(companyRepository.findById(request.companyId())
                     .orElseThrow(() -> new ResourceNotFoundException("Company", request.companyId())));
@@ -155,9 +190,15 @@ public class JobApplicationService {
         application.setSalary(request.salary() == null ? null : request.salary().toEntity());
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
+        application.setNotes(blankToNull(request.notes()));
         application.setDateFound(request.dateFound());
         application.setDateApplied(request.dateApplied());
+        applicationRepository.flush();
         return application;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     @Transactional
@@ -166,19 +207,46 @@ public class JobApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<JobApplication> search(RecruitmentStatus status, Long companyId, Pageable pageable) {
+    public Page<JobApplication> search(ApplicationFilter filter, Pageable pageable) {
         pageable.getSort().forEach(order -> {
             if (!SORTABLE.contains(order.getProperty())) {
                 throw new BadRequestException("Unsupported sort property: " + order.getProperty());
             }
         });
-        Specification<JobApplication> spec = (root, _, cb) -> {
+        Specification<JobApplication> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (status != null) {
-                predicates.add(cb.equal(root.get("currentStatus"), status));
+            if (filter.status() != null) predicates.add(cb.equal(root.get("currentStatus"), filter.status()));
+            if (filter.companyId() != null) predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
+            if (filter.source() != null) predicates.add(cb.equal(root.get("source"), filter.source()));
+            if (filter.workMode() != null) predicates.add(cb.equal(root.get("workMode"), filter.workMode()));
+            if (filter.employmentType() != null)
+                predicates.add(cb.equal(root.get("employmentType"), filter.employmentType()));
+            if (filter.seniorityLevel() != null)
+                predicates.add(cb.equal(root.get("seniorityLevel"), filter.seniorityLevel()));
+            if (filter.foundFrom() != null)
+                predicates.add(cb.greaterThanOrEqualTo(root.get("dateFound"), filter.foundFrom()));
+            if (filter.foundTo() != null)
+                predicates.add(cb.lessThanOrEqualTo(root.get("dateFound"), filter.foundTo()));
+            if (filter.deadlineBefore() != null)
+                predicates.add(cb.lessThanOrEqualTo(root.get("deadline"), filter.deadlineBefore()));
+            switch (filter.archived()) {
+                case ACTIVE -> predicates.add(cb.isFalse(root.get("archived")));
+                case ARCHIVED -> predicates.add(cb.isTrue(root.get("archived")));
+                case ALL -> {
+                }
             }
-            if (companyId != null) {
-                predicates.add(cb.equal(root.get("company").get("id"), companyId));
+            String[] terms = filter.q() == null ? new String[0] : filter.q().trim().toLowerCase().split("\\s+");
+            if (terms.length > 0 && !terms[0].isEmpty()) {
+                Join<JobApplication, Company> company = root.join("company");
+                for (String term : terms) {
+                    String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.get("position")), pattern, '\\'),
+                            cb.like(cb.lower(company.get("name")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("location")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("rawDescription")), pattern, '\\'),
+                            cb.like(cb.lower(root.get("notes")), pattern, '\\')));
+                }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

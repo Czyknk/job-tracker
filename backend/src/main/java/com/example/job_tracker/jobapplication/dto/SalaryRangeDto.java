@@ -21,7 +21,7 @@ public record SalaryRangeDto(
         SalaryBasis basis) {
 
     @JsonIgnore
-    @SuppressWarnings("unused") // wywoływana przez Bean Validation (@AssertTrue)
+    @SuppressWarnings("unused") // is called by Bean Validation (@AssertTrue)
     @AssertTrue(message = "min must not be greater than max")
     public boolean isRangeValid() {
         return min == null || max == null || min.compareTo(max) <= 0;

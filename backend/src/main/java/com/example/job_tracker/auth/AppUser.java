@@ -31,6 +31,10 @@ public class AppUser extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = true;
 
+    public void changePasswordHash(String newHash) {
+        this.passwordHash = newHash;
+    }
+
     public AppUser(String email, String passwordHash, Role role) {
         this.email = email;
         this.passwordHash = passwordHash;

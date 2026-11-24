@@ -75,10 +75,20 @@ public class JobApplication extends BaseEntity {
 
     private LocalDate dateApplied;
 
-    // Zdenormalizowany "bieżący" status; źródłem prawdy jest historia statusów.
+    // Denormalized "current" status; the source of truth is the status history.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private RecruitmentStatus currentStatus = RecruitmentStatus.FOUND;
+
+    @Column(columnDefinition = "text")
+    private String notes;
+
+    @Column(nullable = false)
+    private boolean archived;
+
+    @Version
+    @Setter(AccessLevel.NONE)
+    private Long version;
     
     
     public Set<Document> getDocuments() {

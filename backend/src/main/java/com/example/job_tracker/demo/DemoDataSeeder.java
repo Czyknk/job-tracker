@@ -66,7 +66,7 @@ public class DemoDataSeeder {
         Contact marta = contact(contoso, "Marta", "Kowalska", "HR Business Partner", "marta.kowalska@contoso.example.com");
         contact(globex, "Tomasz", "Lewandowski", "Engineering Manager", "tomasz.lewandowski@globex.example.com");
 
-        // Documents: v1 is attached to an application first and archived afterwards (archived documents
+        // Documents: v1 is attached to an application first and archived afterward (archived documents
         // cannot be attached)
         Document cvV1 = document("CV_Java_Backend_v1", DocumentType.CV, 60);
         Document cvV2 = document("CV_Java_Backend_v2", DocumentType.CV, 20);
@@ -85,10 +85,15 @@ public class DemoDataSeeder {
         status(northwindJob, RecruitmentStatus.OFFER_RECEIVED, 2, "Verbal offer received, written offer expected this week");
         attach(northwindJob, cvV2);
         attach(northwindJob, letter);
-        summary(northwindJob, "Rola: Junior Java Developer w zespole produktowym, tworzenie REST API.\n"
-                + "Wymagania:\n- Java i Spring Boot\n- PostgreSQL\n- testy automatyczne\n- code review\n"
-                + "Technologie: Java, Spring Boot, PostgreSQL\n"
-                + "Warunki: umowa o pracę, 8000-11000 PLN brutto, Warszawa (hybrydowo).");
+        summary(northwindJob, """
+                Rola: Junior Java Developer w zespole produktowym, tworzenie REST API.
+                Wymagania:
+                - Java i Spring Boot
+                - PostgreSQL
+                - testy automatyczne
+                - code review
+                Technologie: Java, Spring Boot, PostgreSQL
+                Warunki: umowa o pracę, 8000-11000 PLN brutto, Warszawa (hybrydowo).""");
 
         // 2. Rejected after a take-home task
         JobApplication contosoJob = application(contoso, "Java Backend Developer", JobSource.LINKEDIN,
@@ -112,10 +117,14 @@ public class DemoDataSeeder {
                 null, 10);
         status(globexJob, RecruitmentStatus.APPLIED, 9, "Sent the application through the job portal");
         attach(globexJob, cvV2);
-        summary(globexJob, "Rola: Junior Software Engineer w zespole platformy chmurowej.\n"
-                + "Wymagania:\n- Java\n- Docker\n- podstawy CI/CD\n"
-                + "Technologie: Java, Docker, CI/CD, Kubernetes (nauka na miejscu)\n"
-                + "Warunki: umowa o pracę, 7500-10000 PLN brutto, Kraków (hybrydowo).");
+        summary(globexJob, """
+                Rola: Junior Software Engineer w zespole platformy chmurowej.
+                Wymagania:
+                - Java
+                - Docker
+                - podstawy CI/CD
+                Technologie: Java, Docker, CI/CD, Kubernetes (nauka na miejscu)
+                Warunki: umowa o pracę, 7500-10000 PLN brutto, Kraków (hybrydowo).""");
 
         // 4. Found, deadline in 10 days
         application(initech, "Backend Developer Intern", JobSource.PRACUJ_PL,
@@ -172,6 +181,7 @@ public class DemoDataSeeder {
                 "https://careers." + company.getName().toLowerCase().replace(' ', '-') + ".example/jobs",
                 source, location, workMode, employmentType, seniority, salary, description,
                 deadlineInDays == null ? null : today.plusDays(deadlineInDays),
+                null,
                 today.minusDays(foundDaysAgo), null));
     }
 

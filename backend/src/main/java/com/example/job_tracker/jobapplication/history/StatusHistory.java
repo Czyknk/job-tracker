@@ -17,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Wpis w historii rekrutacji. Log zmian jest niezmienny.
+ * Represents a change in the recruitment status of a job application.
  */
 @Entity
 @Table(name = "status_history")
@@ -47,6 +47,12 @@ public class StatusHistory extends BaseEntity {
 
     public StatusHistory(JobApplication application, RecruitmentStatus status, Instant changedAt, String note) {
         this.application = application;
+        this.status = status;
+        this.changedAt = changedAt;
+        this.note = note;
+    }
+
+    public void correct(RecruitmentStatus status, Instant changedAt, String note) {
         this.status = status;
         this.changedAt = changedAt;
         this.note = note;
