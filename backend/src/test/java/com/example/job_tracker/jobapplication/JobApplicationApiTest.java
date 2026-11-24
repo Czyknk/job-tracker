@@ -39,6 +39,26 @@ class JobApplicationApiTest {
     }
 
     @Test
+    void createsFoundAndAppliedEntriesFromProvidedDates() throws Exception {
+        long applicationId = createApplicationWithDates(
+                createCompany("Date Sync Co"),
+                "2026-10-10",
+                "2026-10-12");
+
+        mockMvc.perform(get("/api/applications/{id}", applicationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dateFound").value("2026-10-10"))
+                .andExpect(jsonPath("$.dateApplied").value("2026-10-12"))
+                .andExpect(jsonPath("$.currentStatus").value("APPLIED"));
+
+        mockMvc.perform(get("/api/applications/{id}/history", applicationId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("FOUND"))
+                .andExpect(jsonPath("$[1].status").value("APPLIED"));
+    }
+
+    @Test
     void createsApplicationAndTracksStatusThroughApi() throws Exception {
         long companyId = createCompany("Initech");
         long applicationId = createApplication(companyId, "Junior Java Developer");
@@ -167,6 +187,17 @@ class JobApplicationApiTest {
                                 + "\"source\":\"PRACUJ_PL\",\"workMode\":\"REMOTE\","
                                 + "\"salary\":{\"min\":8000,\"max\":12000,\"currency\":\"PLN\","
                                 + "\"period\":\"MONTH\",\"basis\":\"GROSS\"}}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return ((Number) JsonPath.read(body, "$.id")).longValue();
+    }
+
+    private long createApplicationWithDates(long companyId, String dateFound, String dateApplied) throws Exception {
+        String body = mockMvc.perform(post("/api/applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"companyId\":" + companyId + ",\"position\":\"Developer\","
+                                + "\"source\":\"OTHER\",\"dateFound\":\"" + dateFound + "\","
+                                + "\"dateApplied\":\"" + dateApplied + "\"}"))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return ((Number) JsonPath.read(body, "$.id")).longValue();

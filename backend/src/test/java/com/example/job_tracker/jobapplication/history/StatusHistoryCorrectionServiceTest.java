@@ -72,8 +72,21 @@ class StatusHistoryCorrectionServiceTest {
         service.update(1L, 11L, RecruitmentStatus.APPLIED, T3, "Corrected time");
 
         assertThat(application.getCurrentStatus()).isEqualTo(RecruitmentStatus.APPLIED);
+        assertThat(application.getDateApplied()).isEqualTo(LocalDate.of(2026, 11, 15));
         assertThat(applied.getChangedAt()).isEqualTo(T3);
         assertThat(applied.getNote()).isEqualTo("Corrected time");
+    }
+
+    @Test
+    void correctingTheFoundEntryRecomputesDateFound() {
+        StatusHistory found = entry(10, RecruitmentStatus.FOUND, T0);
+        timeline(found, entry(11, RecruitmentStatus.APPLIED, T1));
+
+        service.update(1L, 10L, RecruitmentStatus.FOUND, T1, "Corrected discovery");
+
+        assertThat(application.getDateFound()).isEqualTo(LocalDate.of(2026, 11, 5));
+        assertThat(found.getChangedAt()).isEqualTo(T1);
+        assertThat(found.getNote()).isEqualTo("Corrected discovery");
     }
 
     @Test
@@ -123,13 +136,16 @@ class StatusHistoryCorrectionServiceTest {
     }
 
     @Test
-    void deletingTheAppliedEntryKeepsADateAppliedTypedInByHand() {
-        timeline(entry(10, RecruitmentStatus.FOUND, T0), entry(11, RecruitmentStatus.APPLIED, T1));
-        application.setDateApplied(LocalDate.of(2026, 10, 30));
+    void deletingOneAppliedEntryRecomputesDateAppliedFromAnotherAppliedEntry() {
+        StatusHistory firstApplied = entry(11, RecruitmentStatus.APPLIED, T1);
+        StatusHistory secondApplied = entry(12, RecruitmentStatus.APPLIED, T2);
+        timeline(entry(10, RecruitmentStatus.FOUND, T0), firstApplied, secondApplied);
+        application.setCurrentStatus(RecruitmentStatus.APPLIED);
+        application.setDateApplied(LocalDate.of(2026, 11, 5));
 
         service.delete(1L, 11L);
 
-        assertThat(application.getDateApplied()).isEqualTo(LocalDate.of(2026, 10, 30));
+        assertThat(application.getDateApplied()).isEqualTo(LocalDate.of(2026, 11, 10));
     }
 
     @Test

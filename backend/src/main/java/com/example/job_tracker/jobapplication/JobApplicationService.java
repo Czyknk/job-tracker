@@ -48,10 +48,28 @@ public class JobApplicationService {
      */
     @Transactional
     public JobApplication create(JobApplication application) {
+        LocalDate dateFound = application.getDateFound();
+        LocalDate dateApplied = application.getDateApplied();
+        if (dateApplied != null && dateApplied.isBefore(dateFound)) {
+            throw new BadRequestException("dateApplied cannot be before dateFound");
+        }
         JobApplication saved = applicationRepository.save(application);
         statusHistoryRepository.save(
-                new StatusHistory(saved, saved.getCurrentStatus(), clock.instant(), null));
+                new StatusHistory(saved, RecruitmentStatus.FOUND,
+                        instantAtStartOfDay(dateFound), null));
+        if (dateApplied != null) {
+            statusHistoryRepository.save(
+                    new StatusHistory(saved, RecruitmentStatus.APPLIED,
+                            instantAtStartOfDay(dateApplied), null));
+            saved.setCurrentStatus(RecruitmentStatus.APPLIED);
+        } else {
+            saved.setCurrentStatus(RecruitmentStatus.FOUND);
+        }
         return saved;
+    }
+
+    private Instant instantAtStartOfDay(LocalDate date) {
+        return date.atStartOfDay(clock.getZone()).toInstant();
     }
 
     /**
@@ -159,6 +177,10 @@ public class JobApplicationService {
         if (request.dateFound() != null) {
             application.setDateFound(request.dateFound());
         }
+        if (request.dateApplied() != null
+                && request.dateApplied().isBefore(application.getDateFound())) {
+            throw new BadRequestException("dateApplied cannot be before dateFound");
+        }
         application.setDateApplied(request.dateApplied());
         return create(application);
     }
@@ -174,6 +196,9 @@ public class JobApplicationService {
         JobApplication application = get(id);
         if (!application.getVersion().equals(request.version())) {
             throw new ConflictException("The application was modified in the meantime; reload it and try again");
+        }
+        if (request.dateApplied() != null && request.dateApplied().isBefore(request.dateFound())) {
+            throw new BadRequestException("dateApplied cannot be before dateFound");
         }
 
         if (!application.getCompany().getId().equals(request.companyId())) {
@@ -193,8 +218,64 @@ public class JobApplicationService {
         application.setNotes(blankToNull(request.notes()));
         application.setDateFound(request.dateFound());
         application.setDateApplied(request.dateApplied());
+        synchronizeHistoryDates(application);
         applicationRepository.flush();
         return application;
+    }
+
+    /**
+     * Dates stored on JobApplication are projections of the history:
+     * dateFound comes from FOUND and dateApplied from APPLIED.
+     */
+    private void synchronizeHistoryDates(JobApplication application) {
+        List<StatusHistory> entries =
+                statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(application.getId());
+        if (entries == null) {
+            entries = List.of();
+        }
+
+        entries.stream()
+                .filter(entry -> entry.getStatus() == RecruitmentStatus.FOUND)
+                .min(Comparator.comparing(StatusHistory::getChangedAt).thenComparing(StatusHistory::getId))
+                .ifPresent(entry -> entry.correct(
+                        RecruitmentStatus.FOUND,
+                        instantAtStartOfDay(application.getDateFound()),
+                        entry.getNote()));
+
+        List<StatusHistory> applied = entries.stream()
+                .filter(entry -> entry.getStatus() == RecruitmentStatus.APPLIED)
+                .sorted(Comparator.comparing(StatusHistory::getChangedAt).thenComparing(StatusHistory::getId))
+                .toList();
+
+        if (application.getDateApplied() == null) {
+            statusHistoryRepository.deleteAll(applied);
+        } else if (applied.isEmpty()) {
+            statusHistoryRepository.save(new StatusHistory(
+                    application,
+                    RecruitmentStatus.APPLIED,
+                    instantAtStartOfDay(application.getDateApplied()),
+                    null));
+        } else {
+            StatusHistory firstApplied = applied.getFirst();
+            firstApplied.correct(
+                    RecruitmentStatus.APPLIED,
+                    instantAtStartOfDay(application.getDateApplied()),
+                    firstApplied.getNote());
+        }
+
+        entries = statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(application.getId());
+        if (entries == null) {
+            entries = List.of();
+        }
+        if (!entries.isEmpty()) {
+            StatusHistory latest = entries.stream()
+                    .max(Comparator
+                            .comparing((StatusHistory entry) -> entry.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
+                            .thenComparing(StatusHistory::getChangedAt)
+                            .thenComparing(StatusHistory::getId))
+                    .orElseThrow();
+            application.setCurrentStatus(latest.getStatus());
+        }
     }
 
     private static String blankToNull(String value) {
@@ -213,7 +294,7 @@ public class JobApplicationService {
                 throw new BadRequestException("Unsupported sort property: " + order.getProperty());
             }
         });
-        Specification<JobApplication> spec = (root, query, cb) -> {
+        Specification<JobApplication> spec = (root, _, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (filter.status() != null) predicates.add(cb.equal(root.get("currentStatus"), filter.status()));
             if (filter.companyId() != null) predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));

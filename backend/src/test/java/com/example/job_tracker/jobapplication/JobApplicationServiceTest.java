@@ -29,7 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class JobApplicationServiceTest {
+class  JobApplicationServiceTest {
 
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneOffset.UTC);
@@ -119,7 +119,24 @@ class JobApplicationServiceTest {
         ArgumentCaptor<StatusHistory> captor = ArgumentCaptor.forClass(StatusHistory.class);
         verify(statusHistoryRepository).save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(RecruitmentStatus.FOUND);
-        assertThat(captor.getValue().getChangedAt()).isEqualTo(FIXED_CLOCK.instant());
+        assertThat(captor.getValue().getChangedAt()).isEqualTo(
+                application.getDateFound().atStartOfDay(FIXED_CLOCK.getZone()).toInstant());
         assertThat(captor.getValue().getApplication()).isSameAs(application);
+    }
+
+    @Test
+    void createWithDateAppliedWritesFoundAndAppliedHistoryEntries() {
+        application.setDateFound(LocalDate.of(2026, 10, 20));
+        application.setDateApplied(LocalDate.of(2026, 10, 22));
+        when(applicationRepository.save(application)).thenReturn(application);
+
+        service.create(application);
+
+        ArgumentCaptor<StatusHistory> captor = ArgumentCaptor.forClass(StatusHistory.class);
+        verify(statusHistoryRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(StatusHistory::getStatus)
+                .containsExactly(RecruitmentStatus.FOUND, RecruitmentStatus.APPLIED);
+        assertThat(application.getCurrentStatus()).isEqualTo(RecruitmentStatus.APPLIED);
     }
 }
