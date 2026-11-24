@@ -186,3 +186,29 @@ export function deleteHistoryEntry(
     accessToken,
   )
 }
+
+export function attachContactToHistory(
+  applicationId: number,
+  entryId: number,
+  contactId: number,
+  accessToken: string,
+): Promise<void> {
+  return apiFetch<void>(
+    `/applications/${applicationId}/history/${entryId}/contacts/${contactId}`,
+    { method: 'PUT' },
+    accessToken,
+  )
+}
+
+export function detachContactFromHistory(
+  applicationId: number,
+  entryId: number,
+  contactId: number,
+  accessToken: string,
+): Promise<void> {
+  return apiFetch<void>(
+    `/applications/${applicationId}/history/${entryId}/contacts/${contactId}`,
+    { method: 'DELETE' },
+    accessToken,
+  )
+}

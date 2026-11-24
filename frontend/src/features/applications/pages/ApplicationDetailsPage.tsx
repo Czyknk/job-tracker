@@ -27,6 +27,8 @@ import {
   updateApplicationNotes,
   archiveApplication,
   unarchiveApplication,
+  attachContactToHistory,
+  detachContactFromHistory,
 } from '../applicationApi'
 import type {
   ApplicationResponse,
@@ -86,6 +88,8 @@ export function ApplicationDetailsPage() {
   const [editingStatus, setEditingStatus] = useState<RecruitmentStatus>('FOUND')
   const [editingChangedAt, setEditingChangedAt] = useState('')
   const [editingNote, setEditingNote] = useState('')
+  const [editingContactIds, setEditingContactIds] = useState<number[]>([])
+  const [savingHistoryEntry, setSavingHistoryEntry] = useState(false)
 
   useEffect(() => {
     if (!accessToken || invalidId) return
@@ -277,23 +281,58 @@ export function ApplicationDetailsPage() {
     setEditingStatus(entry.status)
     setEditingChangedAt(entry.changedAt.slice(0, 16))
     setEditingNote(entry.note ?? '')
+    setEditingContactIds(entry.contacts.map((contact) => contact.id))
   }
 
   async function handleSaveHistoryEntry() {
     if (!accessToken || !application || editingHistoryId === null) return
     setHistoryError('')
+    setSavingHistoryEntry(true)
     try {
+      const currentEntry = history.find((entry) => entry.id === editingHistoryId)
+      if (!currentEntry) {
+        throw new Error('The history entry is no longer available. Reload the page.')
+      }
+
       await updateHistoryEntry(application.id, editingHistoryId, {
         status: editingStatus,
         changedAt: new Date(editingChangedAt).toISOString(),
         note: editingNote.trim() || null,
       }, accessToken)
+
+      const currentContactIds = new Set(currentEntry.contacts.map((contact) => contact.id))
+      const nextContactIds = new Set(editingContactIds)
+      const attachIds = editingContactIds.filter((id) => !currentContactIds.has(id))
+      const detachIds = currentEntry.contacts
+        .map((contact) => contact.id)
+        .filter((id) => !nextContactIds.has(id))
+
+      const contactUpdates = await Promise.allSettled([
+        ...attachIds.map((contactId) =>
+          attachContactToHistory(application.id, editingHistoryId, contactId, accessToken)),
+        ...detachIds.map((contactId) =>
+          detachContactFromHistory(application.id, editingHistoryId, contactId, accessToken)),
+      ])
+      const failedUpdate = contactUpdates.find((result) => result.status === 'rejected')
+      if (failedUpdate?.status === 'rejected') throw failedUpdate.reason
+
       await reloadApplicationAndHistory()
       setEditingHistoryId(null)
     } catch (requestError) {
       setHistoryError(requestError instanceof ApiError
         ? requestError.problem.detail ?? requestError.problem.title
-        : 'Unable to edit the history entry.')
+        : requestError instanceof Error
+          ? requestError.message
+          : 'Unable to edit the history entry.')
+      try {
+        await reloadApplicationAndHistory()
+      } catch {
+        setHistoryError((current) =>
+          `${current} Changes may be partially saved; reload the page to see the latest state.`,
+        )
+      }
+    } finally {
+      setSavingHistoryEntry(false)
     }
   }
 
@@ -319,6 +358,13 @@ export function ApplicationDetailsPage() {
       </section>
     )
   }
+
+  const editingEntry = history.find((entry) => entry.id === editingHistoryId)
+  const editableContacts = [
+    ...contacts,
+    ...(editingEntry?.contacts ?? []),
+  ].filter((contact, index, allContacts) =>
+    allContacts.findIndex((candidate) => candidate.id === contact.id) === index)
 
   return (
     <section className="content-card">
@@ -522,15 +568,39 @@ export function ApplicationDetailsPage() {
                     maxLength={2000}
                   />
                 </label>
+                <fieldset className="contact-selection">
+                  <legend>Contacts involved</legend>
+                  {editableContacts.length > 0
+                    ? editableContacts.map((contact) => (
+                      <label key={contact.id} className="contact-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={editingContactIds.includes(contact.id)}
+                          disabled={savingHistoryEntry}
+                          onChange={(event) => {
+                            setEditingContactIds((current) => event.target.checked
+                              ? [...current, contact.id]
+                              : current.filter((id) => id !== contact.id))
+                          }}
+                        />
+                        {contact.firstName} {contact.lastName ?? ''}
+                        {contact.position ? ` — ${contact.position}` : ''}
+                      </label>
+                    ))
+                    : <p>No contacts are available for this company.</p>}
+                </fieldset>
                 <div className="form-actions">
                   <button
                     type="button"
                     className="button-secondary"
                     onClick={() => setEditingHistoryId(null)}
+                    disabled={savingHistoryEntry}
                   >
                     Cancel
                   </button>
-                  <button type="submit">Save entry</button>
+                  <button type="submit" disabled={savingHistoryEntry}>
+                    {savingHistoryEntry ? 'Saving...' : 'Save entry'}
+                  </button>
                 </div>
               </form>
             )}
