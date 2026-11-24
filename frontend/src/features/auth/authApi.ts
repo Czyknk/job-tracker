@@ -1,5 +1,10 @@
 import { apiFetch } from '../../shared/api/http'
-import type { LoginRequest, TokenResponse } from './authTypes'
+import type {
+  ChangePasswordRequest,
+  CurrentUserResponse,
+  LoginRequest,
+  TokenResponse,
+} from './authTypes'
 
 let refreshRequest: Promise<TokenResponse> | null = null
 
@@ -25,4 +30,18 @@ export function logout(): Promise<void> {
   return apiFetch<void>('/auth/logout', {
     method: 'POST',
   })
+}
+
+export function getCurrentUser(accessToken: string): Promise<CurrentUserResponse> {
+  return apiFetch<CurrentUserResponse>('/auth/me', {}, accessToken)
+}
+
+export function changePassword(
+  request: ChangePasswordRequest,
+  accessToken: string,
+): Promise<void> {
+  return apiFetch<void>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  }, accessToken)
 }

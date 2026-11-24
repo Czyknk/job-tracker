@@ -72,6 +72,7 @@ export function ApplicationForm({
     application?.dateFound ?? today,
   )
   const [dateApplied, setDateApplied] = useState(application?.dateApplied ?? '')
+  const [notes, setNotes] = useState(application?.notes ?? '')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -102,6 +103,8 @@ export function ApplicationForm({
       deadline: deadline || null,
       dateFound,
       dateApplied: dateApplied || null,
+      notes: notes.trim() || null,
+      version: application?.version,
     })
   }
 
@@ -301,6 +304,16 @@ export function ApplicationForm({
           value={rawDescription}
           onChange={(event) => setRawDescription(event.target.value)}
           rows={8}
+          disabled={readOnly}
+        />
+      </label>
+
+      <label>
+        Notes
+        <textarea
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          rows={5}
           disabled={readOnly}
         />
       </label>

@@ -12,6 +12,7 @@ import { ContactsPage } from './features/contacts/pages/ContactsPage'
 import { ContactDetailsPage } from './features/contacts/pages/ContactDetailsPage'
 import { ContactFormPage } from './features/contacts/pages/ContactFormPage'
 import { DocumentsPage } from './features/documents/pages/DocumentsPage'
+import { ChangePasswordPage } from './features/auth/pages/ChangePasswordPage'
 
 function Dashboard() {
   const { accessToken, user, logout } = useAuth()
@@ -36,6 +37,9 @@ function Dashboard() {
             <dd>{user?.role}</dd>
           </div>
         </dl>
+        <div className="account-actions">
+          <Link className="button-secondary" to="/change-password">Change password</Link>
+        </div>
         {accessToken && (
             <details className="token-details">
               <summary>Access token</summary>
@@ -125,6 +129,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/*" element={<AppLayout />} />
       </Route>
       <Route path="*" element={<h1>Page not found</h1>} />
