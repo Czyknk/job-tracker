@@ -55,9 +55,12 @@ public class StatusHistoryCorrectionService {
                 .sorted(TIMELINE_ORDER)
                 .toList();
         requireFinalStatusLast(proposed);
+        requireFoundStatusPresent(proposed);
+        requireDateOrder(proposed);
 
         entry.correct(status, changedAt, note);
         application.setCurrentStatus(proposed.getLast().status());
+        synchronizeDerivedDates(application, proposed);
         return entry;
     }
 
@@ -76,24 +79,28 @@ public class StatusHistoryCorrectionService {
                 .map(Point::of)
                 .sorted(TIMELINE_ORDER)
                 .toList();
+        requireFoundStatusPresent(remaining);
+        requireDateOrder(remaining);
 
         application.setCurrentStatus(remaining.getLast().status());
-        clearDerivedDateApplied(application, entry, remaining);
+        synchronizeDerivedDates(application, remaining);
         historyRepository.delete(entry);
     }
 
-    /**
-     * dateApplied is set from the first APPLIED entry unless the user typed it in. If that entry is
-     * removed and no other APPLIED entry remains, a date that matches the removed entry is cleared;
-     * a date set by hand to another day is kept.
-     */
-    private void clearDerivedDateApplied(JobApplication application, StatusHistory removed, List<Point> remaining) {
-        boolean noAppliedLeft = remaining.stream().noneMatch(p -> p.status() == RecruitmentStatus.APPLIED);
-        LocalDate removedDate = LocalDate.ofInstant(removed.getChangedAt(), clock.getZone());
-        if (removed.getStatus() == RecruitmentStatus.APPLIED && noAppliedLeft
-                && removedDate.equals(application.getDateApplied())) {
-            application.setDateApplied(null);
-        }
+    private void synchronizeDerivedDates(JobApplication application, List<Point> timeline) {
+        timeline.stream()
+                .filter(point -> point.status() == RecruitmentStatus.FOUND)
+                .findFirst()
+                .ifPresent(point -> application.setDateFound(
+                        LocalDate.ofInstant(point.changedAt(), clock.getZone())));
+
+        timeline.stream()
+                .filter(point -> point.status() == RecruitmentStatus.APPLIED)
+                .findFirst()
+                .ifPresentOrElse(
+                        point -> application.setDateApplied(
+                                LocalDate.ofInstant(point.changedAt(), clock.getZone())),
+                        () -> application.setDateApplied(null));
     }
 
     // A final status (ACCEPTED, REJECTED, WITHDRAWN) ends the process, so nothing may come after it.
@@ -102,6 +109,28 @@ public class StatusHistoryCorrectionService {
             if (timeline.get(i).status().isTerminal()) {
                 throw new ConflictException("A final status must be the last history entry");
             }
+        }
+    }
+
+    private static void requireFoundStatusPresent(List<Point> timeline) {
+        if (timeline.stream().noneMatch(point -> point.status() == RecruitmentStatus.FOUND)) {
+            throw new ConflictException("An application must keep a FOUND history entry");
+        }
+    }
+
+    private void requireDateOrder(List<Point> timeline) {
+        LocalDate dateFound = timeline.stream()
+                .filter(point -> point.status() == RecruitmentStatus.FOUND)
+                .findFirst()
+                .map(point -> LocalDate.ofInstant(point.changedAt(), clock.getZone()))
+                .orElse(null);
+        LocalDate dateApplied = timeline.stream()
+                .filter(point -> point.status() == RecruitmentStatus.APPLIED)
+                .findFirst()
+                .map(point -> LocalDate.ofInstant(point.changedAt(), clock.getZone()))
+                .orElse(null);
+        if (dateFound != null && dateApplied != null && dateApplied.isBefore(dateFound)) {
+            throw new ConflictException("dateApplied cannot be before dateFound");
         }
     }
 
