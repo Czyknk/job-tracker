@@ -21,8 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * Testy edycji i usuwania firm oraz aplikacji. Przed DELETE czyścimy kontekst persystencji,
- * bo kaskady (ON DELETE CASCADE) działają w bazie, a nie w Hibernate.
+ * Tests for editing and deleting companies and applications. Before DELETE we clear the persistence context,
+ * because cascades (ON DELETE CASCADE) work in the database, not in Hibernate.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -98,7 +98,7 @@ class CompanyAndApplicationCrudApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"companyId\":" + otherCompanyId + ",\"position\":\"Senior Java Developer\","
                                 + "\"source\":\"LINKEDIN\",\"dateFound\":\"2026-10-01\","
-                                + "\"location\":\"Remote\",\"workMode\":\"REMOTE\"}"))
+                                + "\"location\":\"Remote\",\"workMode\":\"REMOTE\", \"version\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.position").value("Senior Java Developer"))
                 .andExpect(jsonPath("$.companyName").value("Other Co"))
@@ -115,26 +115,27 @@ class CompanyAndApplicationCrudApiTest {
     @Test
     void applicationUpdateValidatesAndReportsMissingResources() throws Exception {
         long applicationId = createApplication(createCompany("Valid Co"));
-
+        
+        // missing required fields
         mockMvc.perform(put("/api/applications/{id}", applicationId)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"position\":\"\"}"))
+                        .content("{\"position\":\"\", \"version\":0}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.companyId").exists())
                 .andExpect(jsonPath("$.errors.position").exists())
                 .andExpect(jsonPath("$.errors.source").exists())
                 .andExpect(jsonPath("$.errors.dateFound").exists());
-
+        // non-existing company or application
         mockMvc.perform(put("/api/applications/{id}", applicationId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"companyId\":999999,\"position\":\"Dev\",\"source\":\"OTHER\","
-                                + "\"dateFound\":\"2026-10-01\"}"))
+                                + "\"dateFound\":\"2026-10-01\", \"version\":0}"))
                 .andExpect(status().isNotFound());
-
+        // non-existing application
         mockMvc.perform(put("/api/applications/{id}", 999_999)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"companyId\":" + 1 + ",\"position\":\"Dev\",\"source\":\"OTHER\","
-                                + "\"dateFound\":\"2026-10-01\"}"))
+                                + "\"dateFound\":\"2026-10-01\", \"version\":0}"))
                 .andExpect(status().isNotFound());
     }
 
@@ -162,13 +163,13 @@ class CompanyAndApplicationCrudApiTest {
         mockMvc.perform(get("/api/applications/{id}/history", applicationId))
                 .andExpect(status().isNotFound());
 
-        // dokument zostaje i po odpięciu od usuniętej aplikacji można go już usunąć
+        // the document remains and after detaching it from the deleted application it can be deleted
         mockMvc.perform(get("/api/documents/{id}", documentId))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/api/documents/{id}", documentId))
                 .andExpect(status().isNoContent());
 
-        // firma bez aplikacji da się teraz usunąć
+        // the company can now be deleted
         mockMvc.perform(delete("/api/companies/{id}", companyId))
                 .andExpect(status().isNoContent());
     }
