@@ -172,6 +172,7 @@ public class DemoDataSeeder {
                 "https://careers." + company.getName().toLowerCase().replace(' ', '-') + ".example/jobs",
                 source, location, workMode, employmentType, seniority, salary, description,
                 deadlineInDays == null ? null : today.plusDays(deadlineInDays),
+                null,
                 today.minusDays(foundDaysAgo), null));
     }
 
