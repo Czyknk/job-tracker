@@ -16,12 +16,14 @@ import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.contact.Contact;
 import com.example.job_tracker.contact.ContactRepository;
+import com.example.job_tracker.jobapplication.dto.ApplicationFilter;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -179,19 +181,46 @@ public class JobApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<JobApplication> search(RecruitmentStatus status, Long companyId, Pageable pageable) {
+    public Page<JobApplication> search(ApplicationFilter filter, Pageable pageable) {
         pageable.getSort().forEach(order -> {
             if (!SORTABLE.contains(order.getProperty())) {
                 throw new BadRequestException("Unsupported sort property: " + order.getProperty());
             }
         });
-        Specification<JobApplication> spec = (root, _, cb) -> {
+        Specification<JobApplication> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (status != null) {
-                predicates.add(cb.equal(root.get("currentStatus"), status));
+            if (filter.status() != null) predicates.add(cb.equal(root.get("currentStatus"), filter.status()));
+            if (filter.companyId() != null) predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
+            if (filter.source() != null) predicates.add(cb.equal(root.get("source"), filter.source()));
+            if (filter.workMode() != null) predicates.add(cb.equal(root.get("workMode"), filter.workMode()));
+            if (filter.employmentType() != null)
+                predicates.add(cb.equal(root.get("employmentType"), filter.employmentType()));
+            if (filter.seniorityLevel() != null)
+                predicates.add(cb.equal(root.get("seniorityLevel"), filter.seniorityLevel()));
+            if (filter.foundFrom() != null)
+                predicates.add(cb.greaterThanOrEqualTo(root.<LocalDate>get("dateFound"), filter.foundFrom()));
+            if (filter.foundTo() != null)
+                predicates.add(cb.lessThanOrEqualTo(root.<LocalDate>get("dateFound"), filter.foundTo()));
+            if (filter.deadlineBefore() != null)
+                predicates.add(cb.lessThanOrEqualTo(root.<LocalDate>get("deadline"), filter.deadlineBefore()));
+            switch (filter.archived()) {
+                case ACTIVE -> predicates.add(cb.isFalse(root.get("archived")));
+                case ARCHIVED -> predicates.add(cb.isTrue(root.get("archived")));
+                case ALL -> {
+                }
             }
-            if (companyId != null) {
-                predicates.add(cb.equal(root.get("company").get("id"), companyId));
+            String[] terms = filter.q() == null ? new String[0] : filter.q().trim().toLowerCase().split("\\s+");
+            if (terms.length > 0 && !terms[0].isEmpty()) {
+                Join<JobApplication, Company> company = root.join("company");
+                for (String term : terms) {
+                    String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+                    predicates.add(cb.or(
+                            cb.like(cb.lower(root.<String>get("position")), pattern, '\\'),
+                            cb.like(cb.lower(company.<String>get("name")), pattern, '\\'),
+                            cb.like(cb.lower(root.<String>get("location")), pattern, '\\'),
+                            cb.like(cb.lower(root.<String>get("rawDescription")), pattern, '\\'),
+                            cb.like(cb.lower(root.<String>get("notes")), pattern, '\\')));
+                }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

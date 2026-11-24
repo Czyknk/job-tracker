@@ -1,12 +1,13 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.PageResponse;
+import com.example.job_tracker.jobapplication.dto.ApplicationFilter;
+import com.example.job_tracker.jobapplication.dto.JobApplicationListItem;
 import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.dto.ChangeStatusRequest;
 import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.dto.JobApplicationResponse;
 import com.example.job_tracker.jobapplication.history.dto.StatusHistoryResponse;
-import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,15 +41,11 @@ public class JobApplicationController {
     }
 
     @GetMapping
-    @Operation(summary = "List applications (paged), optionally filtered by status and/or company",
-            description = "Sortable by: dateFound, dateApplied, deadline, position, currentStatus, createdAt. "
-                    + "Example: sort=deadline,asc")
-    public PageResponse<JobApplicationResponse> list(
-            @RequestParam(required = false) RecruitmentStatus status,
-            @RequestParam(required = false) Long companyId,
+    public PageResponse<JobApplicationListItem> list(
+            @ParameterObject ApplicationFilter filter,
             @ParameterObject @PageableDefault(size = 20, sort = "dateFound", direction = Sort.Direction.DESC)
             Pageable pageable) {
-        return PageResponse.from(service.search(status, companyId, pageable), JobApplicationResponse::from);
+        return PageResponse.from(service.search(filter, pageable), JobApplicationListItem::from);
     }
 
     @GetMapping("/{id}")
