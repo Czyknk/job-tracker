@@ -83,8 +83,10 @@ Full request/response details are in Swagger UI.
 | --- | --- |
 | Authentication | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
 | Companies | `POST/GET /companies`, `GET/PUT/DELETE /companies/{id}` |
-| Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `GET /applications/{id}/history` |
+| Account | `GET /auth/me, POST /auth/change-password, Status history corrections` |
+| Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `GET /applications/{id}/history`, `PUT /applications/{id}/notes`, `POST /applications/{id}/archive`, `POST /applications/{id}/unarchive` |
 | Contacts | `POST/GET /contacts`, `GET/PUT/DELETE /contacts/{id}`, `PUT/DELETE /applications/{id}/history/{entryId}/contacts/{contactId}` |
+| Status history corrections | `PUT/DELETE /applications/{id}/history/{entryId}` |
 | Documents | `POST/GET /documents`, `POST /documents/upload`, `GET/PUT/DELETE /documents/{id}`, `GET /documents/{id}/file` |
 | Application documents | `GET /applications/{id}/documents`, `PUT/DELETE /applications/{id}/documents/{documentId}` |
 | AI summaries | `POST/GET /applications/{id}/summaries`, `GET /applications/{id}/summaries/latest` |
@@ -142,8 +144,10 @@ Defaults work with the provided `docker-compose.yml`; override them with environ
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `APP_TIMEZONE` | `Europe/Warsaw` | Time zone for date/time fields (ISO 8601) |
 | `JWT_SECRET` | none (required) | Signing key for access tokens, at least 32 bytes |
 | `APP_ADMIN_EMAIL`, `APP_ADMIN_PASSWORD` | none | Owner account created when the user table is empty |
+| `APP_ADMIN_RESET_PASSWORD` | `false` | If `true`, account password will be reset to `APP_ADMIN_PASSWORD` on next login |
 | `COOKIE_SECURE` | `false` in Compose | Set to `true` behind HTTPS so the refresh cookie is sent only over TLS |
 | `APP_DEMO_ENABLED` | `false` | Demo mode (see above) |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | `localhost`, `jobtracker`, `jobtracker` | PostgreSQL connection |
