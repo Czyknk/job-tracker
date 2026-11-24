@@ -1,12 +1,8 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.PageResponse;
-import com.example.job_tracker.jobapplication.dto.ApplicationFilter;
-import com.example.job_tracker.jobapplication.dto.JobApplicationListItem;
-import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
+import com.example.job_tracker.jobapplication.dto.*;
 import com.example.job_tracker.jobapplication.history.dto.ChangeStatusRequest;
-import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
-import com.example.job_tracker.jobapplication.dto.JobApplicationResponse;
 import com.example.job_tracker.jobapplication.history.dto.StatusHistoryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -68,6 +64,24 @@ public class JobApplicationController {
     @Operation(summary = "Get the status history of an application, oldest first")
     public List<StatusHistoryResponse> history(@PathVariable Long id) {
         return service.getHistory(id).stream().map(StatusHistoryResponse::from).toList();
+    }
+
+    @PutMapping("/{id}/notes")
+    @Operation(summary = "Replace the notes of an application (blank clears them)")
+    public JobApplicationResponse updateNotes(@PathVariable Long id, @Valid @RequestBody NotesRequest request) {
+        return JobApplicationResponse.from(service.updateNotes(id, request.notes()));
+    }
+
+    @PostMapping("/{id}/archive")
+    @Operation(summary = "Archive an application (hidden from the default list)")
+    public JobApplicationResponse archive(@PathVariable Long id) {
+        return JobApplicationResponse.from(service.setArchived(id, true));
+    }
+
+    @PostMapping("/{id}/unarchive")
+    @Operation(summary = "Restore an archived application")
+    public JobApplicationResponse unarchive(@PathVariable Long id) {
+        return JobApplicationResponse.from(service.setArchived(id, false));
     }
 
     @PutMapping("/{id}")

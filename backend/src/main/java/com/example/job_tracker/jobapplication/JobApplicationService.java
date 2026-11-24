@@ -112,6 +112,20 @@ public class JobApplicationService {
     }
 
     @Transactional
+    public JobApplication updateNotes(Long id, String notes) {
+        JobApplication application = get(id);
+        application.setNotes(blankToNull(notes));
+        return application;
+    }
+
+    @Transactional
+    public JobApplication setArchived(Long id, boolean archived) {
+        JobApplication application = get(id);
+        application.setArchived(archived);
+        return application;
+    }
+
+    @Transactional
     public JobApplication create(CreateJobApplicationRequest request) {
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new ResourceNotFoundException("Company", request.companyId()));
