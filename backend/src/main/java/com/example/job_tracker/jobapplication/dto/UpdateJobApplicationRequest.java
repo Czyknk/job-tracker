@@ -12,8 +12,8 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 /**
- * Pełna zamiana edytowalnych pól (semantyka PUT): pominięte pola opcjonalne zostaną wyczyszczone.
- * Status zmienia się osobnym endpointem /status, bo każda zmiana trafia do historii.
+ * Full replacement of editable fields (PUT semantics): omitted optional fields will be cleared.
+ * Status is changed via a separate /status endpoint, because each change goes to the history.
  */
 public record UpdateJobApplicationRequest(
         @Schema(example = "1")
@@ -29,6 +29,8 @@ public record UpdateJobApplicationRequest(
         @Valid SalaryRangeDto salary,
         String rawDescription,
         LocalDate deadline,
+        String notes,
+        @NotNull Long version,
         @NotNull LocalDate dateFound,
         LocalDate dateApplied) {
 }

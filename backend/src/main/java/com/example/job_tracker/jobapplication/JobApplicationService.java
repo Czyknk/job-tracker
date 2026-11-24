@@ -1,6 +1,7 @@
 package com.example.job_tracker.jobapplication;
 
 import com.example.job_tracker.common.exceptions.BadRequestException;
+import com.example.job_tracker.common.exceptions.ConflictException;
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import java.time.Clock;
 import java.time.Instant;
@@ -43,8 +44,8 @@ public class JobApplicationService {
             Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt");
 
     /**
-     * Zapisuje aplikację i od razu zakłada pierwszy wpis historii, żeby historia
-     * zawsze zaczynała się od bieżącego statusu.
+     * Saves the application and immediately creates the first history entry, so that the history
+     * always starts with the current status.
      */
     @Transactional
     public JobApplication create(JobApplication application) {
@@ -55,8 +56,8 @@ public class JobApplicationService {
     }
 
     /**
-     * Zmienia status: dopisuje wpis do historii i aktualizuje currentStatus w jednej transakcji.
-     * changedAt jest opcjonalne (domyślnie "teraz"); currentStatus zawsze odpowiada ostatnio dodanemu wpisowi.
+     * Changes the status of the job application: adds an entry to the history and updates the currentStatus in a single transaction.
+     * changedAt is optional (defaults to "now"); currentStatus always corresponds to the most recently added entry.
      */
     @Transactional
     public StatusHistory changeStatus(Long applicationId, RecruitmentStatus newStatus,
@@ -74,7 +75,8 @@ public class JobApplicationService {
         if (current.isTerminal()) {
             throw new InvalidStatusChangeException(current, newStatus);
         }
-        Set<Contact> contacts = resolveContacts(contactIds);   // przed jakąkolwiek zmianą
+        // Resolve the contacts before making any changes
+        Set<Contact> contacts = resolveContacts(contactIds);
 
         Instant effectiveChangedAt = changedAt != null ? changedAt : clock.instant();
         StatusHistory entry = new StatusHistory(application, newStatus, effectiveChangedAt, note);
@@ -125,6 +127,7 @@ public class JobApplicationService {
         }
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
+        application.setNotes(blankToNull(request.notes()));
         if (request.dateFound() != null) {
             application.setDateFound(request.dateFound());
         }
@@ -141,6 +144,10 @@ public class JobApplicationService {
     @Transactional
     public JobApplication update(Long id, UpdateJobApplicationRequest request) {
         JobApplication application = get(id);
+        if (!application.getVersion().equals(request.version())) {
+            throw new ConflictException("The application was modified in the meantime; reload it and try again");
+        }
+
         if (!application.getCompany().getId().equals(request.companyId())) {
             application.setCompany(companyRepository.findById(request.companyId())
                     .orElseThrow(() -> new ResourceNotFoundException("Company", request.companyId())));
@@ -155,9 +162,15 @@ public class JobApplicationService {
         application.setSalary(request.salary() == null ? null : request.salary().toEntity());
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
+        application.setNotes(blankToNull(request.notes()));
         application.setDateFound(request.dateFound());
         application.setDateApplied(request.dateApplied());
+        applicationRepository.flush();
         return application;
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     @Transactional
