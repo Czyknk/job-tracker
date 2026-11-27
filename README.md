@@ -180,7 +180,8 @@ cd backend
 When running from an IDE, set `JWT_SECRET`, `APP_ADMIN_EMAIL` and `APP_ADMIN_PASSWORD` as environment variables.
 
 Integration tests run against a throwaway PostgreSQL container (Testcontainers), never against the development
-database, with their own test configuration (no secrets needed), and the LLM is replaced by a fake.
+database, with their own test configuration (no secrets needed). No AI key is configured there, so the Gemini API
+is never called; the AI summary endpoints are covered only by the access-control tests.
 
 ## CI/CD
 
