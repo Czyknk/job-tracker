@@ -66,8 +66,8 @@ public class StatusHistory extends BaseEntity {
         contacts.add(contact);
     }
 
-    public boolean removeContactById(Long contactId) {
-        return contacts.removeIf(c -> Objects.equals(c.getId(), contactId));
+    public void removeContactById(Long contactId) {
+        contacts.removeIf(c -> Objects.equals(c.getId(), contactId));
     }
     
 }
