@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.time.LocalDate;
 
 public record CreateJobApplicationRequest(
@@ -27,8 +28,12 @@ public record CreateJobApplicationRequest(
         @Schema(description = "Full pasted job description")
         String rawDescription,
         LocalDate deadline,
-        @Schema(description = "Defaults to today when omitted")
         String notes,
+        @Schema(description = "Defaults to today (in the application time zone) when omitted")
         LocalDate dateFound,
-        LocalDate dateApplied) {
+        LocalDate dateApplied,
+        @Schema(description = "When the next planned step (interview, task, follow-up) happens")
+        Instant nextStepAt,
+        @Schema(description = "Short description of the next step", example = "Technical interview with the team lead")
+        @Size(max = 200) String nextStepNote) {
 }

@@ -5,8 +5,10 @@ import com.example.job_tracker.company.Company;
 import com.example.job_tracker.document.Document;
 import com.example.job_tracker.jobapplication.model.*;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashSet;
@@ -70,8 +72,9 @@ public class JobApplication extends BaseEntity {
 
     private LocalDate deadline;
 
+    // Required; JobApplicationService.create defaults it to today from the Clock (app.timezone)
     @Column(nullable = false)
-    private LocalDate dateFound = LocalDate.now();
+    private LocalDate dateFound;
 
     private LocalDate dateApplied;
 
@@ -86,9 +89,23 @@ public class JobApplication extends BaseEntity {
     @Column(nullable = false)
     private boolean archived;
 
+    // Next planned action (interview, task, follow-up). Optional; status changes never touch it.
+    private Instant nextStepAt;
+
+    @Column(length = 200)
+    private String nextStepNote;
+
     @Version
     @Setter(AccessLevel.NONE)
     private Long version;
+
+    // Derived, read-only: time of the most recent status history entry (FOUND included). Computed by a
+    // correlated subquery in the same select (index on status_history(application_id, changed_at)), so it
+    // can be filtered and sorted on without N+1 queries. It is read when the entity is loaded, so code that
+    // changes the history and returns the entity must flush and refresh it.
+    @Formula("(select max(sh.changed_at) from status_history sh where sh.application_id = id)")
+    @Setter(AccessLevel.NONE)
+    private Instant lastStatusChangedAt;
     
     
     public Set<Document> getDocuments() {
@@ -99,8 +116,8 @@ public class JobApplication extends BaseEntity {
         documents.add(document);
     }
 
-    public boolean detachDocumentById(Long documentId) {
-        return documents.removeIf(d -> Objects.equals(d.getId(), documentId));
+    public void detachDocumentById(Long documentId) {
+        documents.removeIf(d -> Objects.equals(d.getId(), documentId));
     }
     
     public JobApplication(Company company, String position) {

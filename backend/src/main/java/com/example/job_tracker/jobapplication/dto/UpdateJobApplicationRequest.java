@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -32,5 +33,9 @@ public record UpdateJobApplicationRequest(
         String notes,
         @NotNull Long version,
         @NotNull LocalDate dateFound,
-        LocalDate dateApplied) {
+        LocalDate dateApplied,
+        @Schema(description = "When the next planned step (interview, task, follow-up) happens")
+        Instant nextStepAt,
+        @Schema(description = "Short description of the next step", example = "Technical interview with the team lead")
+        @Size(max = 200) String nextStepNote) {
 }

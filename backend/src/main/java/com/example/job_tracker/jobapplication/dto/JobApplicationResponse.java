@@ -23,8 +23,11 @@ public record JobApplicationResponse(
         LocalDate dateFound,
         LocalDate dateApplied,
         RecruitmentStatus currentStatus,
+        Instant lastStatusChangedAt,
         String notes,
         boolean archived,
+        Instant nextStepAt,
+        String nextStepNote,
         Long version,
         Instant createdAt,
         Instant updatedAt) {
@@ -48,8 +51,11 @@ public record JobApplicationResponse(
                 application.getDateFound(),
                 application.getDateApplied(),
                 application.getCurrentStatus(),
+                application.getLastStatusChangedAt(),
                 application.getNotes(),
                 application.isArchived(),
+                application.getNextStepAt(),
+                application.getNextStepNote(),
                 application.getVersion(),
                 application.getCreatedAt(),
                 application.getUpdatedAt());

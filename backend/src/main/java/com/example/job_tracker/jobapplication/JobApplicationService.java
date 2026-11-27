@@ -19,7 +19,9 @@ import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
+import com.example.job_tracker.jobapplication.model.ArchiveScope;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +40,16 @@ public class JobApplicationService {
     private final CompanyRepository companyRepository;
     private final ContactRepository contactRepository;
     private final Clock clock;
+    private final EntityManager entityManager;
     
+    // Statuses in which an application waits for the employer (open, already applied)
+    private static final Set<RecruitmentStatus> STALE_CANDIDATES = RecruitmentStatus.OPEN.stream()
+            .filter(status -> status != RecruitmentStatus.FOUND)
+            .collect(Collectors.toUnmodifiableSet());
+
     private static final Set<String> SORTABLE =
-            Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt");
+            Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt",
+                    "lastStatusChangedAt");
 
     /**
      * Saves the application and immediately creates the first history entry, so that the history
@@ -48,6 +57,9 @@ public class JobApplicationService {
      */
     @Transactional
     public JobApplication create(JobApplication application) {
+        if (application.getDateFound() == null) {
+            application.setDateFound(LocalDate.now(clock));
+        }
         LocalDate dateFound = application.getDateFound();
         LocalDate dateApplied = application.getDateApplied();
         if (dateApplied != null && dateApplied.isBefore(dateFound)) {
@@ -65,7 +77,7 @@ public class JobApplicationService {
         } else {
             saved.setCurrentStatus(RecruitmentStatus.FOUND);
         }
-        return saved;
+        return reloadDerived(saved);
     }
 
     private Instant instantAtStartOfDay(LocalDate date) {
@@ -174,14 +186,14 @@ public class JobApplicationService {
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
         application.setNotes(blankToNull(request.notes()));
-        if (request.dateFound() != null) {
-            application.setDateFound(request.dateFound());
-        }
+        application.setDateFound(request.dateFound() != null ? request.dateFound() : LocalDate.now(clock));
         if (request.dateApplied() != null
                 && request.dateApplied().isBefore(application.getDateFound())) {
             throw new BadRequestException("dateApplied cannot be before dateFound");
         }
         application.setDateApplied(request.dateApplied());
+        application.setNextStepAt(request.nextStepAt());
+        application.setNextStepNote(blankToNull(request.nextStepNote()));
         return create(application);
     }
 
@@ -218,14 +230,18 @@ public class JobApplicationService {
         application.setNotes(blankToNull(request.notes()));
         application.setDateFound(request.dateFound());
         application.setDateApplied(request.dateApplied());
+        application.setNextStepAt(request.nextStepAt());
+        application.setNextStepNote(blankToNull(request.nextStepNote()));
         synchronizeHistoryDates(application);
-        applicationRepository.flush();
-        return application;
+        return reloadDerived(application);
     }
 
     /**
      * Dates stored on JobApplication are projections of the history:
      * dateFound comes from FOUND and dateApplied from APPLIED.
+     * The history is read once and the resulting timeline is tracked in memory: a second query here would
+     * auto-flush the already modified application, and setting currentStatus afterwards would write it (and bump
+     * its version) a second time.
      */
     private void synchronizeHistoryDates(JobApplication application) {
         List<StatusHistory> entries =
@@ -233,6 +249,7 @@ public class JobApplicationService {
         if (entries == null) {
             entries = List.of();
         }
+        List<StatusHistory> timeline = new ArrayList<>(entries);
 
         entries.stream()
                 .filter(entry -> entry.getStatus() == RecruitmentStatus.FOUND)
@@ -249,12 +266,15 @@ public class JobApplicationService {
 
         if (application.getDateApplied() == null) {
             statusHistoryRepository.deleteAll(applied);
+            timeline.removeAll(applied);
         } else if (applied.isEmpty()) {
-            statusHistoryRepository.save(new StatusHistory(
+            StatusHistory appliedEntry = new StatusHistory(
                     application,
                     RecruitmentStatus.APPLIED,
                     instantAtStartOfDay(application.getDateApplied()),
-                    null));
+                    null);
+            statusHistoryRepository.save(appliedEntry);
+            timeline.add(appliedEntry);
         } else {
             StatusHistory firstApplied = applied.getFirst();
             firstApplied.correct(
@@ -263,19 +283,20 @@ public class JobApplicationService {
                     firstApplied.getNote());
         }
 
-        entries = statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(application.getId());
-        if (entries == null) {
-            entries = List.of();
-        }
-        if (!entries.isEmpty()) {
-            StatusHistory latest = entries.stream()
-                    .max(Comparator
-                            .comparing((StatusHistory entry) -> entry.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
-                            .thenComparing(StatusHistory::getChangedAt)
-                            .thenComparing(StatusHistory::getId))
-                    .orElseThrow();
-            application.setCurrentStatus(latest.getStatus());
-        }
+        timeline.stream()
+                .max(Comparator
+                        .comparing((StatusHistory entry) -> entry.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
+                        .thenComparing(StatusHistory::getChangedAt)
+                        .thenComparing(StatusHistory::getId))
+                .ifPresent(latest -> application.setCurrentStatus(latest.getStatus()));
+    }
+
+    // Writes pending changes and re-reads the entity, so derived values (lastStatusChangedAt) and the
+    // version in the response reflect the history that was just written.
+    private JobApplication reloadDerived(JobApplication application) {
+        applicationRepository.flush();
+        entityManager.refresh(application);
+        return application;
     }
 
     private static String blankToNull(String value) {
@@ -287,6 +308,14 @@ public class JobApplicationService {
         applicationRepository.delete(get(id));
     }
 
+    // Without an explicit archive or active filter the list hides archived applications, as before
+    private static ArchiveScope archiveScope(ApplicationFilter filter) {
+        if (filter.archived() != null) {
+            return filter.archived();
+        }
+        return filter.active() == null ? ArchiveScope.ACTIVE : ArchiveScope.ALL;
+    }
+
     @Transactional(readOnly = true)
     public Page<JobApplication> search(ApplicationFilter filter, Pageable pageable) {
         pageable.getSort().forEach(order -> {
@@ -294,9 +323,11 @@ public class JobApplicationService {
                 throw new BadRequestException("Unsupported sort property: " + order.getProperty());
             }
         });
+        LocalDate today = LocalDate.now(clock);
         Specification<JobApplication> spec = (root, _, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (filter.status() != null) predicates.add(cb.equal(root.get("currentStatus"), filter.status()));
+            if (filter.status() != null && !filter.status().isEmpty())
+                predicates.add(root.get("currentStatus").in(filter.status()));
             if (filter.companyId() != null) predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
             if (filter.source() != null) predicates.add(cb.equal(root.get("source"), filter.source()));
             if (filter.workMode() != null) predicates.add(cb.equal(root.get("workMode"), filter.workMode()));
@@ -310,11 +341,29 @@ public class JobApplicationService {
                 predicates.add(cb.lessThanOrEqualTo(root.get("dateFound"), filter.foundTo()));
             if (filter.deadlineBefore() != null)
                 predicates.add(cb.lessThanOrEqualTo(root.get("deadline"), filter.deadlineBefore()));
-            switch (filter.archived()) {
+            switch (archiveScope(filter)) {
                 case ACTIVE -> predicates.add(cb.isFalse(root.get("archived")));
                 case ARCHIVED -> predicates.add(cb.isTrue(root.get("archived")));
                 case ALL -> {
                 }
+            }
+            if (Boolean.TRUE.equals(filter.active())) {
+                predicates.add(cb.isFalse(root.get("archived")));
+                predicates.add(cb.not(root.get("currentStatus").in(RecruitmentStatus.CLOSED)));
+            } else if (Boolean.FALSE.equals(filter.active())) {
+                predicates.add(cb.or(
+                        cb.isTrue(root.get("archived")),
+                        root.get("currentStatus").in(RecruitmentStatus.CLOSED)));
+            }
+            if (filter.staleDays() != null) {
+                // Stale when the last change happened on or before (today - N), by calendar day
+                Instant cutoff = instantAtStartOfDay(today.minusDays(filter.staleDays() - 1L));
+                predicates.add(cb.isFalse(root.get("archived")));
+                predicates.add(root.get("currentStatus").in(STALE_CANDIDATES));
+                predicates.add(cb.lessThan(root.get("lastStatusChangedAt"), cutoff));
+            }
+            if (filter.deadlineWithinDays() != null) {
+                predicates.add(cb.between(root.get("deadline"), today, today.plusDays(filter.deadlineWithinDays())));
             }
             String[] terms = filter.q() == null ? new String[0] : filter.q().trim().toLowerCase().split("\\s+");
             if (terms.length > 0 && !terms[0].isEmpty()) {

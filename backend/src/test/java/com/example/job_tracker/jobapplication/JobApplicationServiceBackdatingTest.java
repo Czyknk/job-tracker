@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Set;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class JobApplicationServiceBackdatingTest {
     private static final Instant LATEST = Instant.parse("2026-11-10T10:00:00Z");
 
     @Mock
+    private EntityManager entityManager;
+
+    @Mock
     private JobApplicationRepository applicationRepository;
 
     @Mock
@@ -56,7 +60,7 @@ class JobApplicationServiceBackdatingTest {
     @BeforeEach
     void setUp() {
         service = new JobApplicationService(
-                applicationRepository, statusHistoryRepository, companyRepository, contactRepository, CLOCK);
+                applicationRepository, statusHistoryRepository, companyRepository, contactRepository, CLOCK, entityManager);
         application = new JobApplication(new Company("Acme"), "Junior Java Developer");
         application.setCurrentStatus(RecruitmentStatus.TECH_INTERVIEW);
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));

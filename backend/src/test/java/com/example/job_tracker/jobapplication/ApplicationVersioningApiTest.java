@@ -96,6 +96,32 @@ class ApplicationVersioningApiTest {
                 .andExpect(jsonPath("$.errors.version").exists());
     }
 
+    @Test
+    void anUpdateThatChangesTheHistoryBumpsTheVersionOnce() throws Exception {
+        long companyId = createCompany("One Bump Co");
+        long id = createApplication(companyId);
+        String dates = ",\"dateFound\":\"2026-11-01\"";
+
+        // adds the APPLIED entry and changes currentStatus: still one write of the application
+        mockMvc.perform(put("/api/applications/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                        .content(datesBody(companyId, 0, dates + ",\"dateApplied\":\"2026-11-05\"")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentStatus").value("APPLIED"))
+                .andExpect(jsonPath("$.version").value(1));
+
+        // removes the APPLIED entry again
+        mockMvc.perform(put("/api/applications/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                        .content(datesBody(companyId, 1, dates)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentStatus").value("FOUND"))
+                .andExpect(jsonPath("$.version").value(2));
+    }
+
+    private static String datesBody(long companyId, long version, String dateFields) {
+        return "{\"companyId\":" + companyId + ",\"position\":\"Dev\",\"source\":\"OTHER\""
+                + dateFields + ",\"version\":" + version + "}";
+    }
+
     private static String updateBody(long companyId, long version, String notes) {
         return "{\"companyId\":" + companyId + ",\"position\":\"Updated\",\"source\":\"OTHER\","
                 + "\"dateFound\":\"2026-11-01\",\"notes\":\"" + notes + "\",\"version\":" + version + "}";

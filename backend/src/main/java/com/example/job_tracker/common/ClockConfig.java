@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class ClockConfig {
 
     @Bean
-    public Clock clock(@Value("${app.timezone:UTC}") String timezone) {
+    public Clock clock(@Value("${app.timezone:Europe/Warsaw}") String timezone) {
         return Clock.system(ZoneId.of(timezone));
     }
 }

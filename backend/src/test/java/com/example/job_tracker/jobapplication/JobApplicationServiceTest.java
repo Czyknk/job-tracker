@@ -17,10 +17,12 @@ import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
 import com.example.job_tracker.company.Company;
 import com.example.job_tracker.company.CompanyRepository;
 import com.example.job_tracker.contact.ContactRepository;
+import com.example.job_tracker.jobapplication.dto.CreateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,9 @@ class  JobApplicationServiceTest {
 
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse("2026-10-22T10:00:00Z"), ZoneOffset.UTC);
+
+    @Mock
+    private EntityManager entityManager;
 
     @Mock
     private JobApplicationRepository applicationRepository;
@@ -51,7 +56,7 @@ class  JobApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new JobApplicationService(applicationRepository, statusHistoryRepository, companyRepository, contactRepository, FIXED_CLOCK);
+        service = new JobApplicationService(applicationRepository, statusHistoryRepository, companyRepository, contactRepository, FIXED_CLOCK, entityManager);
         application = new JobApplication(new Company("Acme"), "Junior Java Developer");
     }
 
@@ -138,5 +143,21 @@ class  JobApplicationServiceTest {
                 .extracting(StatusHistory::getStatus)
                 .containsExactly(RecruitmentStatus.FOUND, RecruitmentStatus.APPLIED);
         assertThat(application.getCurrentStatus()).isEqualTo(RecruitmentStatus.APPLIED);
+    }
+
+    @Test
+    void createRequestWithoutDateFoundDefaultsToTodayFromTheClock() {
+        // 23:30 UTC on Oct 22 is already Oct 23 in Warsaw: the default must follow the clock zone
+        Clock lateEvening = Clock.fixed(Instant.parse("2026-10-22T23:30:00Z"), java.time.ZoneId.of("Europe/Warsaw"));
+        service = new JobApplicationService(
+                applicationRepository, statusHistoryRepository, companyRepository, contactRepository, lateEvening, entityManager);
+        when(companyRepository.findById(1L)).thenReturn(Optional.of(new Company("Acme")));
+        when(applicationRepository.save(any(JobApplication.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        JobApplication created = service.create(new CreateJobApplicationRequest(
+                1L, "Junior Java Developer", null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null));
+
+        assertThat(created.getDateFound()).isEqualTo(LocalDate.of(2026, 10, 23));
     }
 }
