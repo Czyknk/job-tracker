@@ -152,7 +152,7 @@ class  JobApplicationServiceTest {
 
         JobApplication created = service.create(new CreateJobApplicationRequest(
                 1L, "Junior Java Developer", null, null, null, null, null, null, null, null, null, null,
-                null, null));
+                null, null, null, null));
 
         assertThat(created.getDateFound()).isEqualTo(LocalDate.of(2026, 10, 23));
     }

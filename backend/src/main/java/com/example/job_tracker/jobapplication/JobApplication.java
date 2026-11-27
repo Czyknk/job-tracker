@@ -7,6 +7,7 @@ import com.example.job_tracker.jobapplication.model.*;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashSet;
@@ -85,6 +86,12 @@ public class JobApplication extends BaseEntity {
 
     @Column(nullable = false)
     private boolean archived;
+
+    // Next planned action (interview, task, follow-up). Optional; status changes never touch it.
+    private Instant nextStepAt;
+
+    @Column(length = 200)
+    private String nextStepNote;
 
     @Version
     @Setter(AccessLevel.NONE)

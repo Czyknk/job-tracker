@@ -182,7 +182,7 @@ public class DemoDataSeeder {
                 source, location, workMode, employmentType, seniority, salary, description,
                 deadlineInDays == null ? null : today.plusDays(deadlineInDays),
                 null,
-                today.minusDays(foundDaysAgo), null));
+                today.minusDays(foundDaysAgo), null, null, null));
     }
 
     private void status(JobApplication application, RecruitmentStatus status, int daysAgo, String note,
