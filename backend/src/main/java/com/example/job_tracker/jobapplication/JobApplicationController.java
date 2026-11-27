@@ -38,7 +38,7 @@ public class JobApplicationController {
 
     @GetMapping
     public PageResponse<JobApplicationListItem> list(
-            @ParameterObject ApplicationFilter filter,
+            @Valid @ParameterObject ApplicationFilter filter,
             @ParameterObject @PageableDefault(size = 20, sort = "dateFound", direction = Sort.Direction.DESC)
             Pageable pageable) {
         return PageResponse.from(service.search(filter, pageable), JobApplicationListItem::from);
