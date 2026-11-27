@@ -57,6 +57,9 @@ public class JobApplicationService {
      */
     @Transactional
     public JobApplication create(JobApplication application) {
+        if (application.getDateFound() == null) {
+            application.setDateFound(LocalDate.now(clock));
+        }
         LocalDate dateFound = application.getDateFound();
         LocalDate dateApplied = application.getDateApplied();
         if (dateApplied != null && dateApplied.isBefore(dateFound)) {
