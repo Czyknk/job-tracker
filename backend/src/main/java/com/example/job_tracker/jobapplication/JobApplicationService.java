@@ -239,6 +239,9 @@ public class JobApplicationService {
     /**
      * Dates stored on JobApplication are projections of the history:
      * dateFound comes from FOUND and dateApplied from APPLIED.
+     * The history is read once and the resulting timeline is tracked in memory: a second query here would
+     * auto-flush the already modified application, and setting currentStatus afterwards would write it (and bump
+     * its version) a second time.
      */
     private void synchronizeHistoryDates(JobApplication application) {
         List<StatusHistory> entries =
@@ -246,6 +249,7 @@ public class JobApplicationService {
         if (entries == null) {
             entries = List.of();
         }
+        List<StatusHistory> timeline = new ArrayList<>(entries);
 
         entries.stream()
                 .filter(entry -> entry.getStatus() == RecruitmentStatus.FOUND)
@@ -262,12 +266,15 @@ public class JobApplicationService {
 
         if (application.getDateApplied() == null) {
             statusHistoryRepository.deleteAll(applied);
+            timeline.removeAll(applied);
         } else if (applied.isEmpty()) {
-            statusHistoryRepository.save(new StatusHistory(
+            StatusHistory appliedEntry = new StatusHistory(
                     application,
                     RecruitmentStatus.APPLIED,
                     instantAtStartOfDay(application.getDateApplied()),
-                    null));
+                    null);
+            statusHistoryRepository.save(appliedEntry);
+            timeline.add(appliedEntry);
         } else {
             StatusHistory firstApplied = applied.getFirst();
             firstApplied.correct(
@@ -276,19 +283,12 @@ public class JobApplicationService {
                     firstApplied.getNote());
         }
 
-        entries = statusHistoryRepository.findByApplicationIdOrderByChangedAtAscIdAsc(application.getId());
-        if (entries == null) {
-            entries = List.of();
-        }
-        if (!entries.isEmpty()) {
-            StatusHistory latest = entries.stream()
-                    .max(Comparator
-                            .comparing((StatusHistory entry) -> entry.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
-                            .thenComparing(StatusHistory::getChangedAt)
-                            .thenComparing(StatusHistory::getId))
-                    .orElseThrow();
-            application.setCurrentStatus(latest.getStatus());
-        }
+        timeline.stream()
+                .max(Comparator
+                        .comparing((StatusHistory entry) -> entry.getStatus() == RecruitmentStatus.FOUND ? 0 : 1)
+                        .thenComparing(StatusHistory::getChangedAt)
+                        .thenComparing(StatusHistory::getId))
+                .ifPresent(latest -> application.setCurrentStatus(latest.getStatus()));
     }
 
     // Writes pending changes and re-reads the entity, so derived values (lastStatusChangedAt) and the
