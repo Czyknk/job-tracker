@@ -72,8 +72,9 @@ public class JobApplication extends BaseEntity {
 
     private LocalDate deadline;
 
+    // Required; JobApplicationService.create defaults it to today from the Clock (app.timezone)
     @Column(nullable = false)
-    private LocalDate dateFound = LocalDate.now();
+    private LocalDate dateFound;
 
     private LocalDate dateApplied;
 
