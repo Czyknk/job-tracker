@@ -27,6 +27,8 @@ public record JobApplicationListItem(
         LocalDate dateApplied,
         RecruitmentStatus currentStatus,
         boolean archived,
+        Instant nextStepAt,
+        String nextStepNote,
         Long version,
         Instant createdAt,
         Instant updatedAt) {
@@ -50,6 +52,8 @@ public record JobApplicationListItem(
                 application.getDateApplied(),
                 application.getCurrentStatus(),
                 application.isArchived(),
+                application.getNextStepAt(),
+                application.getNextStepNote(),
                 application.getVersion(),
                 application.getCreatedAt(),
                 application.getUpdatedAt());

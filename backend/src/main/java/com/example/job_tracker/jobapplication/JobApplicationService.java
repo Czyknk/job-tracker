@@ -180,6 +180,8 @@ public class JobApplicationService {
             throw new BadRequestException("dateApplied cannot be before dateFound");
         }
         application.setDateApplied(request.dateApplied());
+        application.setNextStepAt(request.nextStepAt());
+        application.setNextStepNote(blankToNull(request.nextStepNote()));
         return create(application);
     }
 
@@ -216,6 +218,8 @@ public class JobApplicationService {
         application.setNotes(blankToNull(request.notes()));
         application.setDateFound(request.dateFound());
         application.setDateApplied(request.dateApplied());
+        application.setNextStepAt(request.nextStepAt());
+        application.setNextStepNote(blankToNull(request.nextStepNote()));
         synchronizeHistoryDates(application);
         applicationRepository.flush();
         return application;

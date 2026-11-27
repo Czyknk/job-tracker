@@ -25,6 +25,8 @@ public record JobApplicationResponse(
         RecruitmentStatus currentStatus,
         String notes,
         boolean archived,
+        Instant nextStepAt,
+        String nextStepNote,
         Long version,
         Instant createdAt,
         Instant updatedAt) {
@@ -50,6 +52,8 @@ public record JobApplicationResponse(
                 application.getCurrentStatus(),
                 application.getNotes(),
                 application.isArchived(),
+                application.getNextStepAt(),
+                application.getNextStepNote(),
                 application.getVersion(),
                 application.getCreatedAt(),
                 application.getUpdatedAt());
