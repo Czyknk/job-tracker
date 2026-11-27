@@ -5,6 +5,7 @@ import com.example.job_tracker.company.Company;
 import com.example.job_tracker.document.Document;
 import com.example.job_tracker.jobapplication.model.*;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Formula;
 import lombok.*;
 
 import java.time.Instant;
@@ -96,6 +97,14 @@ public class JobApplication extends BaseEntity {
     @Version
     @Setter(AccessLevel.NONE)
     private Long version;
+
+    // Derived, read-only: time of the most recent status history entry (FOUND included). Computed by a
+    // correlated subquery in the same select (index on status_history(application_id, changed_at)), so it
+    // can be filtered and sorted on without N+1 queries. It is read when the entity is loaded, so code that
+    // changes the history and returns the entity must flush and refresh it.
+    @Formula("(select max(sh.changed_at) from status_history sh where sh.application_id = id)")
+    @Setter(AccessLevel.NONE)
+    private Instant lastStatusChangedAt;
     
     
     public Set<Document> getDocuments() {

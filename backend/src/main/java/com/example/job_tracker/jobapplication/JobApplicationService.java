@@ -20,6 +20,7 @@ import com.example.job_tracker.jobapplication.history.InvalidStatusChangeExcepti
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +39,11 @@ public class JobApplicationService {
     private final CompanyRepository companyRepository;
     private final ContactRepository contactRepository;
     private final Clock clock;
+    private final EntityManager entityManager;
     
     private static final Set<String> SORTABLE =
-            Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt");
+            Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt",
+                    "lastStatusChangedAt");
 
     /**
      * Saves the application and immediately creates the first history entry, so that the history
@@ -65,7 +68,7 @@ public class JobApplicationService {
         } else {
             saved.setCurrentStatus(RecruitmentStatus.FOUND);
         }
-        return saved;
+        return reloadDerived(saved);
     }
 
     private Instant instantAtStartOfDay(LocalDate date) {
@@ -221,8 +224,7 @@ public class JobApplicationService {
         application.setNextStepAt(request.nextStepAt());
         application.setNextStepNote(blankToNull(request.nextStepNote()));
         synchronizeHistoryDates(application);
-        applicationRepository.flush();
-        return application;
+        return reloadDerived(application);
     }
 
     /**
@@ -278,6 +280,14 @@ public class JobApplicationService {
                     .orElseThrow();
             application.setCurrentStatus(latest.getStatus());
         }
+    }
+
+    // Writes pending changes and re-reads the entity, so derived values (lastStatusChangedAt) and the
+    // version in the response reflect the history that was just written.
+    private JobApplication reloadDerived(JobApplication application) {
+        applicationRepository.flush();
+        entityManager.refresh(application);
+        return application;
     }
 
     private static String blankToNull(String value) {

@@ -22,6 +22,7 @@ import com.example.job_tracker.contact.ContactRepository;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,9 @@ class JobApplicationServiceContactsTest {
 
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse("2026-10-28T10:00:00Z"), ZoneOffset.UTC);
+
+    @Mock
+    private EntityManager entityManager;
 
     @Mock
     private JobApplicationRepository applicationRepository;
@@ -54,7 +58,7 @@ class JobApplicationServiceContactsTest {
     @BeforeEach
     void setUp() {
         service = new JobApplicationService(
-                applicationRepository, statusHistoryRepository, companyRepository, contactRepository, FIXED_CLOCK);
+                applicationRepository, statusHistoryRepository, companyRepository, contactRepository, FIXED_CLOCK, entityManager);
         company = new Company("Acme");
         application = new JobApplication(company, "Junior Java Developer");
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
