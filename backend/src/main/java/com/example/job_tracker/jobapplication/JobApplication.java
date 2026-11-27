@@ -116,8 +116,8 @@ public class JobApplication extends BaseEntity {
         documents.add(document);
     }
 
-    public boolean detachDocumentById(Long documentId) {
-        return documents.removeIf(d -> Objects.equals(d.getId(), documentId));
+    public void detachDocumentById(Long documentId) {
+        documents.removeIf(d -> Objects.equals(d.getId(), documentId));
     }
     
     public JobApplication(Company company, String position) {
