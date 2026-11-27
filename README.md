@@ -11,7 +11,10 @@ sent, every recruitment stage, the people you talked to, and an AI-generated sum
 ## Features
 
 - Companies and job applications with filtering, sorting and paging
-- Recruitment pipeline with an immutable status history (`FOUND → APPLIED → … → OFFER_RECEIVED → ACCEPTED / REJECTED`)
+- "Today" dashboard: applications that need attention (deadline soon, no response, not applied yet), upcoming next
+  steps, active applications per status and recent activity, in one call
+- A planned next step (interview, task, follow-up) on each application
+- Recruitment pipeline with a correctable status history (`FOUND → APPLIED → … → OFFER_RECEIVED → ACCEPTED / REJECTED`)
 - Contacts (recruiters, interviewers) linked to the exact stages they took part in
 - Documents (CVs, cover letters) with real file upload to S3-compatible storage, attachable to applications
 - AI summary of a pasted job description, with automatic fallback to a second model
@@ -83,13 +86,19 @@ Full request/response details are in Swagger UI.
 | --- | --- |
 | Authentication | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
 | Companies | `POST/GET /companies`, `GET/PUT/DELETE /companies/{id}` |
-| Account | `GET /auth/me, POST /auth/change-password, Status history corrections` |
+| Account | `GET /auth/me`, `POST /auth/change-password` |
+| Dashboard | `GET /dashboard` |
 | Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `GET /applications/{id}/history`, `PUT /applications/{id}/notes`, `POST /applications/{id}/archive`, `POST /applications/{id}/unarchive` |
 | Contacts | `POST/GET /contacts`, `GET/PUT/DELETE /contacts/{id}`, `PUT/DELETE /applications/{id}/history/{entryId}/contacts/{contactId}` |
 | Status history corrections | `PUT/DELETE /applications/{id}/history/{entryId}` |
 | Documents | `POST/GET /documents`, `POST /documents/upload`, `GET/PUT/DELETE /documents/{id}`, `GET /documents/{id}/file` |
 | Application documents | `GET /applications/{id}/documents`, `PUT/DELETE /applications/{id}/documents/{documentId}` |
 | AI summaries | `POST/GET /applications/{id}/summaries`, `GET /applications/{id}/summaries/latest` |
+
+The application list (`GET /applications`) combines its filters with AND: free-text `q`, `companyId`, `status`
+(repeatable), `active`, `archived`, `staleDays`, `deadlineWithinDays` and more, and it can be sorted by
+`lastStatusChangedAt`. `active=true` means not archived and the process still open; `GHOSTED` counts as finished
+there, although a late reply can still move it on in the history.
 
 ## Quick start
 
@@ -144,7 +153,7 @@ Defaults work with the provided `docker-compose.yml`; override them with environ
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `APP_TIMEZONE` | `Europe/Warsaw` | Time zone for date/time fields (ISO 8601) |
+| `APP_TIMEZONE` | `Europe/Warsaw`| Time zone for dates and "today" (ISO 8601 zone id) |
 | `JWT_SECRET` | none (required) | Signing key for access tokens, at least 32 bytes |
 | `APP_ADMIN_EMAIL`, `APP_ADMIN_PASSWORD` | none | Owner account created when the user table is empty |
 | `APP_ADMIN_RESET_PASSWORD` | `false` | If `true`, account password will be reset to `APP_ADMIN_PASSWORD` on next login |
@@ -154,6 +163,7 @@ Defaults work with the provided `docker-compose.yml`; override them with environ
 | `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `S3_REGION` | local Silo defaults | S3-compatible storage |
 | `GEMINI_API_KEY` | none | AI provider key |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | see `application.yml` | Primary model and fallback for 429/5xx |
+| `APP_DASHBOARD_STALE_DAYS`, `APP_DASHBOARD_DEADLINE_DAYS`, `APP_DASHBOARD_LIMIT` | `14`, `7`, `10` | Dashboard thresholds: days without response, days until a deadline, items per list |
 
 Both the AI client (OpenAI protocol) and the storage layer (S3 protocol) are provider-agnostic: switching provider is
 a configuration change.
@@ -181,6 +191,7 @@ the Docker image, and publishes it to GitHub Container Registry on `main`. Depen
 
 - **Flyway owns the schema**; `ddl-auto: validate` fails fast on any entity/migration mismatch.
 - **Status history is the source of truth**; `currentStatus` is a denormalized column updated in the same transaction.
+  `lastStatusChangedAt` is not stored at all: it is derived from the history with a subquery, so it cannot drift.
 - **Metadata in the database, bytes in S3**, behind an `ObjectStorage` abstraction. Documents attached to
   applications cannot be deleted, only archived.
 - **Authorization lives in one place**: URL rules by HTTP method (read for any role, write for `ADMIN`).
