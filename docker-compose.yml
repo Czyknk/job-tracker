@@ -20,9 +20,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
-      APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Warsaw}
       APP_SECURITY_REFRESH_COOKIE_SECURE: ${COOKIE_SECURE:-false}
       APP_ADMIN_RESET_PASSWORD: ${APP_ADMIN_RESET_PASSWORD:-false}
+      # defaults from application.yml
+      APP_DASHBOARD_STALE_DAYS:
+      APP_DASHBOARD_DEADLINE_DAYS:
+      APP_DASHBOARD_LIMIT:
     ports:
       - "8080:8080"
     depends_on:

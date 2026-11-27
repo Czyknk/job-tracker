@@ -29,7 +29,7 @@ app:
       cookie-secure: true
     recovery:
       reset-admin-password: ${APP_ADMIN_RESET_PASSWORD:false}
-  timezone: ${APP_TIMEZONE:UTC}
+  timezone: ${APP_TIMEZONE:Europe/Warsaw}
       
   storage:
     endpoint: ${S3_ENDPOINT:http://localhost:9000}
