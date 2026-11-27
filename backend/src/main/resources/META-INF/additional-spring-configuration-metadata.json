@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "app.security.recovery.reset-admin-password",
+      "type": "java.lang.Boolean",
+      "description": "When true, the admin account (app.security.admin.email) gets app.security.admin.password as its new password on startup and all its sessions are ended. Read by AdminPasswordReset; remove it again after logging in.",
+      "defaultValue": false
+    },
+    {
+      "name": "app.timezone",
+      "type": "java.lang.String",
+      "description": "Time zone (ISO zone id) of the Clock bean, used for dates and \"today\".",
+      "defaultValue": "Europe/Warsaw"
+    }
+  ]
+}
