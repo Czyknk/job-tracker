@@ -85,7 +85,7 @@ Full request/response details are in Swagger UI.
 | Resource | Endpoints |
 | --- | --- |
 | Authentication | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` |
-| Companies | `POST/GET /companies`, `GET/PUT/DELETE /companies/{id}` |
+| Companies | `POST/GET /companies`, `GET /companies/lookup?q=…&limit=…` (autocomplete), `GET/PUT/DELETE /companies/{id}` |
 | Account | `GET /auth/me`, `POST /auth/change-password` |
 | Dashboard | `GET /dashboard` |
 | Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `POST /applications/{id}/apply`, `GET /applications/{id}/history`, `PUT /applications/{id}/notes`, `POST /applications/{id}/archive`, `POST /applications/{id}/unarchive` |

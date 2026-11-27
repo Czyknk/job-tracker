@@ -1,5 +1,6 @@
 package com.example.job_tracker.company;
 
+import com.example.job_tracker.company.dto.CompanyOption;
 import com.example.job_tracker.company.dto.CompanyRequest;
 import com.example.job_tracker.company.dto.CompanyResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +35,15 @@ public class CompanyController {
     @Operation(summary = "List all companies sorted by name")
     public List<CompanyResponse> list() {
         return companyService.list().stream().map(CompanyResponse::from).toList();
+    }
+
+    @GetMapping("/lookup")
+    @Operation(summary = "Autocomplete companies by name (id and name only)",
+            description = "Case-insensitive 'contains' match; names starting with q come first, then by name. "
+                    + "A blank q returns the first companies by name. limit defaults to 10 and is clamped to 1..20.")
+    public List<CompanyOption> lookup(@RequestParam(required = false) String q,
+                                      @RequestParam(required = false) Integer limit) {
+        return companyService.lookup(q, limit);
     }
 
     @GetMapping("/{id}")
