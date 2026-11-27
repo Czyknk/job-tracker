@@ -2,9 +2,11 @@ package com.example.job_tracker.company;
 
 import com.example.job_tracker.common.exceptions.ConflictException;
 import com.example.job_tracker.common.exceptions.ResourceNotFoundException;
+import com.example.job_tracker.company.dto.CompanyOption;
 import com.example.job_tracker.company.dto.CompanyRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,12 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CompanyService {
 
+    public static final int LOOKUP_DEFAULT_LIMIT = 10;
+    public static final int LOOKUP_MAX_LIMIT = 20;
+
     private final CompanyRepository companyRepository;
 
     @Transactional
     public Company create(CompanyRequest request) {
         String name = request.name().trim();
-        // Czytelny błąd 409; unikalny indeks w bazie zostaje ostatnią linią obrony (wyścigi).
         if (companyRepository.existsByNameIgnoreCase(name)) {
             throw new ConflictException("Company with name '" + name + "' already exists");
         }
@@ -38,6 +42,22 @@ public class CompanyService {
     @Transactional(readOnly = true)
     public List<Company> list() {
         return companyRepository.findAll(Sort.by("name"));
+    }
+
+    /**
+     * Autocomplete: companies whose name contains q (case-insensitive), names starting with q first, then by name.
+     * A blank q returns the first companies by name. The limit is clamped to 1..20 instead of rejected.
+     */
+    @Transactional(readOnly = true)
+    public List<CompanyOption> lookup(String q, Integer limit) {
+        String term = q == null ? "" : escapeLike(q.trim().toLowerCase());
+        int size = limit == null ? LOOKUP_DEFAULT_LIMIT : Math.clamp(limit, 1, LOOKUP_MAX_LIMIT);
+        return companyRepository.lookup("%" + term + "%", term + "%", Limit.of(size));
+    }
+
+    // Makes %, _ and the escape char itself match literally ('!' is the escape char in the query)
+    private static String escapeLike(String value) {
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     @Transactional
