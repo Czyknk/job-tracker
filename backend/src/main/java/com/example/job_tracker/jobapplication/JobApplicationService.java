@@ -174,9 +174,7 @@ public class JobApplicationService {
         application.setRawDescription(request.rawDescription());
         application.setDeadline(request.deadline());
         application.setNotes(blankToNull(request.notes()));
-        if (request.dateFound() != null) {
-            application.setDateFound(request.dateFound());
-        }
+        application.setDateFound(request.dateFound() != null ? request.dateFound() : LocalDate.now(clock));
         if (request.dateApplied() != null
                 && request.dateApplied().isBefore(application.getDateFound())) {
             throw new BadRequestException("dateApplied cannot be before dateFound");
