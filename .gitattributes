@@ -2,4 +2,5 @@
 mvnw text eol=lf
 gradlew text eol=lf
 *.sh text eol=lf
-*.cmd text eol=crlf
+# Windows scripts stay byte-for-byte as committed (CRLF); Dependabot writes them unnormalized
+*.cmd -text
