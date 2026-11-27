@@ -1,5 +1,8 @@
-# Step 1: Build the application (Maven + JDK 25)
-FROM maven:3-eclipse-temurin-27-alpine AS builder
+# Java version for both stages; docker-compose.yml passes it as a build argument (default 25, as in pom.xml)
+ARG JAVA_VERSION=25
+
+# Step 1: Build the application (Maven + JDK)
+FROM maven:3-eclipse-temurin-${JAVA_VERSION}-alpine AS builder
 WORKDIR /app
 
 # Copy the pom.xml and download dependencies
@@ -10,8 +13,8 @@ RUN mvn dependency:go-offline
 COPY src ./src
 RUN mvn package -DskipTests
 
-# Step 2: Create a minimal runtime image (JRE + JDK 25)
-FROM eclipse-temurin:25-jre-alpine
+# Step 2: Create a minimal runtime image (JRE only)
+FROM eclipse-temurin:${JAVA_VERSION}-jre-alpine
 WORKDIR /app
 
 # Copy the built JAR file
