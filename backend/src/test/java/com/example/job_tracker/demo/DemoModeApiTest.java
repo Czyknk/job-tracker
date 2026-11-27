@@ -1,7 +1,11 @@
 package com.example.job_tracker.demo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -75,6 +79,16 @@ class DemoModeApiTest {
                 .andExpect(jsonPath("$.length()").value(3));
 
         assertThat(summaryRepository.count()).isPositive();
+    }
+
+    @Test
+    void theDashboardShowsTheSampleData() throws Exception {
+        mockMvc.perform(get("/api/dashboard").header(HttpHeaders.AUTHORIZATION, demoToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.needsAttention[*].reason")
+                        .value(hasItems("DEADLINE_SOON", "NO_RESPONSE", "NOT_APPLIED_YET")))
+                .andExpect(jsonPath("$.upcoming", hasSize(greaterThanOrEqualTo(2))))
+                .andExpect(jsonPath("$.recentActivity", not(empty())));
     }
 
     @Test

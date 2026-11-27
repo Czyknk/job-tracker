@@ -78,7 +78,7 @@ public class DemoDataSeeder {
                 salary(8000, 11000, SalaryPeriod.MONTH, SalaryBasis.GROSS),
                 "We are looking for a Junior Java Developer to join our product team. You will build REST APIs "
                         + "with Spring Boot and PostgreSQL, write automated tests and take part in code reviews.",
-                null, 25);
+                null, 25, inDaysAt(2, 10), "Call about the written offer");
         status(northwindJob, RecruitmentStatus.APPLIED, 21, "Applied through the company website");
         status(northwindJob, RecruitmentStatus.HR_SCREEN, 14, "30-minute call about motivation and salary", anna);
         status(northwindJob, RecruitmentStatus.TECH_INTERVIEW, 7, "Interview with the team: Java, SQL, design basics", anna, piotr);
@@ -108,14 +108,14 @@ public class DemoDataSeeder {
         status(contosoJob, RecruitmentStatus.REJECTED, 1, "Feedback: they need more production experience", marta);
         attach(contosoJob, cvV2);
 
-        // 3. Waiting for an answer, with an AI-style summary
+        // 3. Waiting for an answer for over two weeks ("no response" on the dashboard), with an AI-style summary
         JobApplication globexJob = application(globex, "Junior Software Engineer (Java)", JobSource.THE_PROTOCOL,
                 "Krakow", WorkMode.HYBRID, EmploymentType.UOP, SeniorityLevel.JUNIOR,
                 salary(7500, 10000, SalaryPeriod.MONTH, SalaryBasis.GROSS),
                 "Our cloud platform team is hiring a Junior Software Engineer. You will work with Java, Docker "
                         + "and CI/CD pipelines, and learn Kubernetes from experienced colleagues.",
-                null, 10);
-        status(globexJob, RecruitmentStatus.APPLIED, 9, "Sent the application through the job portal");
+                null, 18);
+        status(globexJob, RecruitmentStatus.APPLIED, 16, "Sent the application through the job portal");
         attach(globexJob, cvV2);
         summary(globexJob, """
                 Rola: Junior Software Engineer w zespole platformy chmurowej.
@@ -141,11 +141,11 @@ public class DemoDataSeeder {
         status(umbrellaJob, RecruitmentStatus.GHOSTED, 5, "No answer after two follow-up e-mails");
         attach(umbrellaJob, cvV1);
 
-        // 6. Found, deadline in 4 days
+        // 6. Found, deadline in 4 days, cover letter planned for tomorrow evening
         application(globex, "Junior Kotlin/Java Developer", JobSource.OTHER,
                 "Krakow", WorkMode.HYBRID, EmploymentType.UOP, SeniorityLevel.JUNIOR, null,
                 "Backend developer for the billing team (Kotlin and Java on the JVM).",
-                4, 1);
+                4, 1, inDaysAt(1, 18), "Finish the cover letter");
 
         // Archive the old CV now that it is attached to a past application
         documentService.update(cvV1.getId(), new UpdateDocumentRequest(cvV1.getName(), DocumentType.CV, true));
@@ -175,6 +175,15 @@ public class DemoDataSeeder {
                                        WorkMode workMode, EmploymentType employmentType,
                                        SeniorityLevel seniority, SalaryRangeDto salary, String description,
                                        Integer deadlineInDays, int foundDaysAgo) {
+        return application(company, position, source, location, workMode, employmentType, seniority, salary,
+                description, deadlineInDays, foundDaysAgo, null, null);
+    }
+
+    private JobApplication application(Company company, String position, JobSource source, String location,
+                                       WorkMode workMode, EmploymentType employmentType,
+                                       SeniorityLevel seniority, SalaryRangeDto salary, String description,
+                                       Integer deadlineInDays, int foundDaysAgo,
+                                       Instant nextStepAt, String nextStepNote) {
         LocalDate today = LocalDate.now(clock);
         return applicationService.create(new CreateJobApplicationRequest(
                 company.getId(), position,
@@ -182,7 +191,12 @@ public class DemoDataSeeder {
                 source, location, workMode, employmentType, seniority, salary, description,
                 deadlineInDays == null ? null : today.plusDays(deadlineInDays),
                 null,
-                today.minusDays(foundDaysAgo), null, null, null));
+                today.minusDays(foundDaysAgo), null, nextStepAt, nextStepNote));
+    }
+
+    // A full hour N days from today, in the application time zone
+    private Instant inDaysAt(int days, int hour) {
+        return LocalDate.now(clock).plusDays(days).atTime(hour, 0).atZone(clock.getZone()).toInstant();
     }
 
     private void status(JobApplication application, RecruitmentStatus status, int daysAgo, String note,
