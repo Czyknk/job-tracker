@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
+import java.time.LocalDate;
+
 import com.example.job_tracker.TestcontainersConfiguration;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
@@ -23,7 +26,8 @@ import org.springframework.web.context.WebApplicationContext;
 
 /**
  * lastStatusChangedAt: the time of the most recent history entry, FOUND included.
- * The test configuration uses the default time zone (UTC), so start-of-day instants end with T00:00:00Z.
+ * FOUND and APPLIED entries created from dates are stored at the start of that day in the application time zone,
+ * so the expected instants are computed from the Clock bean instead of assuming a particular zone.
  */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
@@ -35,6 +39,9 @@ class LastStatusChangeApiTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private Clock clock;
 
     private MockMvc mockMvc;
 
@@ -50,10 +57,10 @@ class LastStatusChangeApiTest {
         mockMvc.perform(post("/api/applications").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"companyId\":" + companyId + ",\"position\":\"Dev\",\"dateFound\":\"2026-11-01\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.lastStatusChangedAt").value("2026-11-01T00:00:00Z"));
+                .andExpect(jsonPath("$.lastStatusChangedAt").value(startOfDay("2026-11-01")));
 
         mockMvc.perform(get("/api/applications").param("companyId", String.valueOf(companyId)))
-                .andExpect(jsonPath("$.content[0].lastStatusChangedAt").value("2026-11-01T00:00:00Z"));
+                .andExpect(jsonPath("$.content[0].lastStatusChangedAt").value(startOfDay("2026-11-01")));
     }
 
     @Test
@@ -78,7 +85,12 @@ class LastStatusChangeApiTest {
                         .content("{\"companyId\":" + companyId + ",\"position\":\"Dev\",\"source\":\"OTHER\","
                                 + "\"dateFound\":\"2026-11-01\",\"dateApplied\":\"2026-11-05\",\"version\":0}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lastStatusChangedAt").value("2026-11-05T00:00:00Z"));
+                .andExpect(jsonPath("$.lastStatusChangedAt").value(startOfDay("2026-11-05")));
+    }
+
+    // Instant of the start of the given day in the application time zone, as serialized in JSON
+    private String startOfDay(String date) {
+        return LocalDate.parse(date).atStartOfDay(clock.getZone()).toInstant().toString();
     }
 
     @Test
