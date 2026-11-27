@@ -19,6 +19,7 @@ import com.example.job_tracker.jobapplication.dto.UpdateJobApplicationRequest;
 import com.example.job_tracker.jobapplication.history.InvalidStatusChangeException;
 import com.example.job_tracker.jobapplication.history.StatusHistory;
 import com.example.job_tracker.jobapplication.history.StatusHistoryRepository;
+import com.example.job_tracker.jobapplication.model.ArchiveScope;
 import com.example.job_tracker.jobapplication.model.RecruitmentStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Join;
@@ -41,6 +42,11 @@ public class JobApplicationService {
     private final Clock clock;
     private final EntityManager entityManager;
     
+    // Statuses in which an application waits for the employer (open, already applied)
+    private static final Set<RecruitmentStatus> STALE_CANDIDATES = RecruitmentStatus.OPEN.stream()
+            .filter(status -> status != RecruitmentStatus.FOUND)
+            .collect(Collectors.toUnmodifiableSet());
+
     private static final Set<String> SORTABLE =
             Set.of("dateFound", "dateApplied", "deadline", "position", "currentStatus", "createdAt",
                     "lastStatusChangedAt");
@@ -299,6 +305,14 @@ public class JobApplicationService {
         applicationRepository.delete(get(id));
     }
 
+    // Without an explicit archive or active filter the list hides archived applications, as before
+    private static ArchiveScope archiveScope(ApplicationFilter filter) {
+        if (filter.archived() != null) {
+            return filter.archived();
+        }
+        return filter.active() == null ? ArchiveScope.ACTIVE : ArchiveScope.ALL;
+    }
+
     @Transactional(readOnly = true)
     public Page<JobApplication> search(ApplicationFilter filter, Pageable pageable) {
         pageable.getSort().forEach(order -> {
@@ -306,9 +320,11 @@ public class JobApplicationService {
                 throw new BadRequestException("Unsupported sort property: " + order.getProperty());
             }
         });
+        LocalDate today = LocalDate.now(clock);
         Specification<JobApplication> spec = (root, _, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            if (filter.status() != null) predicates.add(cb.equal(root.get("currentStatus"), filter.status()));
+            if (filter.status() != null && !filter.status().isEmpty())
+                predicates.add(root.get("currentStatus").in(filter.status()));
             if (filter.companyId() != null) predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
             if (filter.source() != null) predicates.add(cb.equal(root.get("source"), filter.source()));
             if (filter.workMode() != null) predicates.add(cb.equal(root.get("workMode"), filter.workMode()));
@@ -322,11 +338,29 @@ public class JobApplicationService {
                 predicates.add(cb.lessThanOrEqualTo(root.get("dateFound"), filter.foundTo()));
             if (filter.deadlineBefore() != null)
                 predicates.add(cb.lessThanOrEqualTo(root.get("deadline"), filter.deadlineBefore()));
-            switch (filter.archived()) {
+            switch (archiveScope(filter)) {
                 case ACTIVE -> predicates.add(cb.isFalse(root.get("archived")));
                 case ARCHIVED -> predicates.add(cb.isTrue(root.get("archived")));
                 case ALL -> {
                 }
+            }
+            if (Boolean.TRUE.equals(filter.active())) {
+                predicates.add(cb.isFalse(root.get("archived")));
+                predicates.add(cb.not(root.get("currentStatus").in(RecruitmentStatus.CLOSED)));
+            } else if (Boolean.FALSE.equals(filter.active())) {
+                predicates.add(cb.or(
+                        cb.isTrue(root.get("archived")),
+                        root.get("currentStatus").in(RecruitmentStatus.CLOSED)));
+            }
+            if (filter.staleDays() != null) {
+                // Stale when the last change happened on or before (today - N), by calendar day
+                Instant cutoff = instantAtStartOfDay(today.minusDays(filter.staleDays() - 1L));
+                predicates.add(cb.isFalse(root.get("archived")));
+                predicates.add(root.get("currentStatus").in(STALE_CANDIDATES));
+                predicates.add(cb.lessThan(root.get("lastStatusChangedAt"), cutoff));
+            }
+            if (filter.deadlineWithinDays() != null) {
+                predicates.add(cb.between(root.get("deadline"), today, today.plusDays(filter.deadlineWithinDays())));
             }
             String[] terms = filter.q() == null ? new String[0] : filter.q().trim().toLowerCase().split("\\s+");
             if (terms.length > 0 && !terms[0].isEmpty()) {
