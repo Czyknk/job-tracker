@@ -26,6 +26,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class JobApplicationController {
 
     private final JobApplicationService service;
+    private final ApplicationApplyService applyService;
 
     @PostMapping
     @Operation(summary = "Create a job application (the first history entry, FOUND, is created automatically)")
@@ -58,6 +59,17 @@ public class JobApplicationController {
                                               @Valid @RequestBody ChangeStatusRequest request) {
         return StatusHistoryResponse.from(
                 service.changeStatus(id, request.status(), request.changedAt(), request.note(), request.contactIds()));
+    }
+
+    @PostMapping("/{id}/apply")
+    @Operation(summary = "Mark an application as applied in one step (APPLIED entry, dateApplied, documents)",
+            description = "Only an application in FOUND can be applied; otherwise 409. appliedAt defaults to now "
+                    + "and must not be before dateFound (400). Documents are attached idempotently; a missing "
+                    + "document gives 404 and an archived one 409, and then nothing is changed. "
+                    + "The body is optional.")
+    public JobApplicationResponse apply(@PathVariable Long id,
+                                        @Valid @RequestBody(required = false) ApplyRequest request) {
+        return JobApplicationResponse.from(applyService.apply(id, request));
     }
 
     @GetMapping("/{id}/history")
