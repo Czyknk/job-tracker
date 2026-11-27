@@ -88,7 +88,7 @@ Full request/response details are in Swagger UI.
 | Companies | `POST/GET /companies`, `GET/PUT/DELETE /companies/{id}` |
 | Account | `GET /auth/me`, `POST /auth/change-password` |
 | Dashboard | `GET /dashboard` |
-| Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `GET /applications/{id}/history`, `PUT /applications/{id}/notes`, `POST /applications/{id}/archive`, `POST /applications/{id}/unarchive` |
+| Applications | `POST/GET /applications`, `GET/PUT/DELETE /applications/{id}`, `POST /applications/{id}/status`, `POST /applications/{id}/apply`, `GET /applications/{id}/history`, `PUT /applications/{id}/notes`, `POST /applications/{id}/archive`, `POST /applications/{id}/unarchive` |
 | Contacts | `POST/GET /contacts`, `GET/PUT/DELETE /contacts/{id}`, `PUT/DELETE /applications/{id}/history/{entryId}/contacts/{contactId}` |
 | Status history corrections | `PUT/DELETE /applications/{id}/history/{entryId}` |
 | Documents | `POST/GET /documents`, `POST /documents/upload`, `GET/PUT/DELETE /documents/{id}`, `GET /documents/{id}/file` |
